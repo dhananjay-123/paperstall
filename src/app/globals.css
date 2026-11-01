@@ -1,0 +1,201 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-instrument-serif);
+  --font-serif: var(--font-instrument-serif);
+  --font-hand: var(--font-caveat);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Ink & Ledger brand tokens */
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-action: var(--action);
+  --color-action-foreground: var(--action-foreground);
+  --color-sky: var(--sky);
+  --color-graphite: var(--graphite);
+  --color-success: var(--success);
+  --color-success-ink: var(--success-ink);
+  --color-warning: var(--warning);
+  --color-warning-ink: var(--warning-ink);
+  --color-danger: var(--danger);
+  --color-danger-ink: var(--danger-ink);
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+/* Paper (light). Spec colours are used for fills; the *-ink variants are darker
+   text versions because #0A8F5C and #C77700 miss WCAG AA as small text on white. */
+:root {
+  --paper: #f7f4ec;
+  --ink: #003087;
+  --action: #0070e0;
+  --action-foreground: #ffffff;
+  --sky: #009cde;
+  --graphite: #1b1b1f;
+  --success: #0a8f5c;
+  --success-ink: #067049;
+  --warning: #c77700;
+  --warning-ink: #8f5500;
+  --danger: #c4302b;
+  --danger-ink: #a5221e;
+
+  --background: var(--paper);
+  --foreground: var(--graphite);
+  --card: #ffffff;
+  --card-foreground: var(--graphite);
+  --popover: #ffffff;
+  --popover-foreground: var(--graphite);
+  --primary: var(--ink);
+  --primary-foreground: #ffffff;
+  --secondary: #ece7da;
+  --secondary-foreground: var(--ink);
+  --muted: #efebe1;
+  --muted-foreground: #5b5a60;
+  --accent: #e6eefb;
+  --accent-foreground: var(--ink);
+  --destructive: var(--danger);
+  --border: #e2dccd;
+  --input: #d8d1bf;
+  --ring: var(--action);
+  --chart-1: #003087;
+  --chart-2: #0070e0;
+  --chart-3: #009cde;
+  --chart-4: #0a8f5c;
+  --chart-5: #c77700;
+  --radius: 0.75rem;
+}
+
+/* Blueprint (dark): deep navy paper, paper-white ink. */
+.dark {
+  --paper: #0b1530;
+  --ink: #f7f4ec;
+  --action: #0070e0;
+  --action-foreground: #ffffff;
+  --sky: #4cc3f0;
+  --graphite: #f7f4ec;
+  --success: #2fbf86;
+  --success-ink: #5fd8a6;
+  --warning: #e8a03a;
+  --warning-ink: #f2bb6b;
+  --danger: #ef6b66;
+  --danger-ink: #f48c88;
+
+  --background: var(--paper);
+  --foreground: #f7f4ec;
+  --card: #12204a;
+  --card-foreground: #f7f4ec;
+  --popover: #12204a;
+  --popover-foreground: #f7f4ec;
+  --primary: #f7f4ec;
+  --primary-foreground: #0b1530;
+  --secondary: #1a2a5a;
+  --secondary-foreground: #f7f4ec;
+  --muted: #16244f;
+  --muted-foreground: #a9b4d0;
+  --accent: #1a2f66;
+  --accent-foreground: #f7f4ec;
+  --destructive: var(--danger);
+  --border: rgb(247 244 236 / 14%);
+  --input: rgb(247 244 236 / 20%);
+  --ring: #4c9dff;
+  --chart-1: #f7f4ec;
+  --chart-2: #4c9dff;
+  --chart-3: #4cc3f0;
+  --chart-4: #2fbf86;
+  --chart-5: #e8a03a;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* Paper grain: a tiny inline SVG noise, so no extra request and nothing for CSP to load. */
+@utility paper-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.1 0 0 0 0 0.15 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Blueprint grid for dark mode. */
+@utility blueprint-grid {
+  background-image:
+    linear-gradient(rgb(247 244 236 / 5%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(247 244 236 / 5%) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* "Ink is drying" shimmer for skeletons. */
+@keyframes ink-dry {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@utility ink-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--muted) 0%,
+    color-mix(in oklch, var(--ink) 10%, var(--muted)) 50%,
+    var(--muted) 100%
+  );
+  background-size: 200% 100%;
+  animation: ink-dry 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
