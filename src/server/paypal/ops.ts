@@ -273,6 +273,23 @@ export function getPlan(id: string, ctx: Ctx = {}) {
   return paypal<Plan>("GET", `/v1/billing/plans/${encodeURIComponent(id)}`, { ...ctx, note: "get plan" });
 }
 
+export function createSubscription(input: { planId: string; returnUrl: string; cancelUrl: string; brandName?: string }, ctx: Ctx = {}) {
+  return paypal<Subscription & { links?: LinkDescription[] }>("POST", "/v1/billing/subscriptions", {
+    ...ctx,
+    note: "create subscription",
+    body: {
+      plan_id: input.planId,
+      application_context: {
+        ...(input.brandName ? { brand_name: input.brandName.slice(0, 127) } : {}),
+        shipping_preference: "NO_SHIPPING",
+        user_action: "SUBSCRIBE_NOW",
+        return_url: input.returnUrl,
+        cancel_url: input.cancelUrl,
+      },
+    },
+  });
+}
+
 export function getSubscription(id: string, ctx: Ctx = {}) {
   return paypal<Subscription>("GET", `/v1/billing/subscriptions/${encodeURIComponent(id)}`, { ...ctx, note: "get subscription" });
 }

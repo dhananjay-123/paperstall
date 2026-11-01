@@ -2,6 +2,8 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import LZString from "lz-string";
 import { StallPayload } from "./stall";
 
+export { peekStall } from "./peek";
+
 // Signatures are HMAC-SHA256 over the exact compressed string, truncated to 128 bits
 // (base64url) to keep links and QR codes short.
 
@@ -41,17 +43,6 @@ export function verifyStall(signed: string, secret: string, nowSec = Math.floor(
   if (!parsed.success) return { ok: false, reason: "invalid" };
   if (parsed.data.x < nowSec) return { ok: false, reason: "expired" };
   return { ok: true, payload: parsed.data };
-}
-
-/** Client-side, unverified decode for rendering only; checkout always re-verifies on the server. */
-export function peekStall(signed: string): StallPayload | null {
-  try {
-    const data = signed.slice(0, signed.lastIndexOf("."));
-    const r = StallPayload.safeParse(JSON.parse(LZString.decompressFromEncodedURIComponent(data) ?? ""));
-    return r.success ? r.data : null;
-  } catch {
-    return null;
-  }
 }
 
 // Receipt QR: orderId + stallId, signed so a seller's scanner can reject forged receipts.

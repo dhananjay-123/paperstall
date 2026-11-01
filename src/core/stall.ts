@@ -12,6 +12,8 @@ export const StallItem = z.object({
   desc: z.string().max(140).optional(),
   // Market range stored at publish time for the concierge ("is this a good price?").
   mkt: z.tuple([z.number().int(), z.number().int()]).optional(),
+  // Product photo from the market check, only when the seller opted in.
+  img: z.url().max(400).optional(),
 });
 export type StallItem = z.infer<typeof StallItem>;
 
