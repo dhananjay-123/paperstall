@@ -72,6 +72,7 @@ async function main() {
         config: {
           responseMimeType: "application/json",
           responseJsonSchema: { type: "object", properties: { box: { type: "array", items: { type: "number" } } }, required: ["box"] },
+          abortSignal: AbortSignal.timeout(30_000),
         },
       });
       row.push(`vision+json ${Date.now() - t}ms ${(r.text ?? "").replace(/\s+/g, "").slice(0, 40)}`);
@@ -85,6 +86,7 @@ async function main() {
         contents: [{ role: "user", parts: [{ text: "What were sales today? Use the tool." }] }],
         config: {
           tools: [{ functionDeclarations: [{ name: "sales_summary", description: "Sales summary", parameters: { type: Type.OBJECT, properties: { period: { type: Type.STRING } }, required: ["period"] } }] }],
+          abortSignal: AbortSignal.timeout(30_000),
         },
       });
       row.push(`tools ${Date.now() - t}ms ${r.functionCalls?.[0]?.name ?? "no call"}`);

@@ -5,9 +5,9 @@ import { env, requireEnv } from "@/lib/env";
 import type { ReceiptBook } from "@/core/receipts";
 import { HttpError } from "@/server/http";
 
-// Defaults until scripts/probe-gemini.ts confirms what this key can use; override in env.
-export const DEFAULT_MODEL = "gemini-2.5-flash";
-export const DEFAULT_FAST_MODEL = "gemini-2.5-flash-lite";
+// Chosen with scripts/probe-gemini.ts on 2026-11-02 (vision+JSON+boxes+tools); override in env.
+export const DEFAULT_MODEL = "gemini-3-flash-preview";
+export const DEFAULT_FAST_MODEL = "gemini-3.5-flash-lite";
 
 let client: GoogleGenAI | null = null;
 function ai() {
@@ -69,9 +69,25 @@ export async function generate(opts: GenOpts) {
   throw new HttpError(502, "AI_FAILED", "The AI couldn't read this right now. Please try again.");
 }
 
+// Gemini's structured output rejects some JSON Schema keywords (found by bisecting a 400:
+// minItems/maxItems, plus $schema, additionalProperties, min/maxLength). zod re-checks all of
+// them after the response, so dropping them here loses no validation.
+const UNSUPPORTED = new Set(["$schema", "additionalProperties", "maxLength", "minLength", "minItems", "maxItems"]);
+
+export function toGeminiSchema(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(toGeminiSchema);
+  if (!node || typeof node !== "object") return node;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(node)) {
+    if (UNSUPPORTED.has(k)) continue;
+    out[k] = k === "properties" ? Object.fromEntries(Object.entries(v as object).map(([pk, pv]) => [pk, toGeminiSchema(pv)])) : toGeminiSchema(v);
+  }
+  return out;
+}
+
 /** Structured output, zod-validated, with one repair attempt that shows the model its errors. */
 export async function generateJson<T>(opts: GenOpts & { schema: ZodType<T>; jsonSchema: unknown }): Promise<T> {
-  const config: GenerateContentConfig = { ...opts.config, responseMimeType: "application/json", responseJsonSchema: opts.jsonSchema };
+  const config: GenerateContentConfig = { ...opts.config, responseMimeType: "application/json", responseJsonSchema: toGeminiSchema(opts.jsonSchema) };
   const first = await generate({ ...opts, config });
   const parsed = safeParse(opts.schema, first.text);
   if (parsed.ok) return parsed.value;
