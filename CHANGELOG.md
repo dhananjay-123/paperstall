@@ -1,12 +1,28 @@
 # Changelog
 
+## Phase 6 (part) — Studio and finish (2026-11-02)
+- Landing page with the judge quick path (sandbox buyer from env), navigation, PWA manifest and icon.
+- Studio: overview (today's takings, pending invoices, photo→published metric), share card + printable A5 poster, ledger (TanStack Table v8: search, status filter, CSV, sticky header, mobile cards, approval-gated refund/track/remind), settings (payee, display currency + seller-set rate, sound, export/import/reset).
+- OpenAPI 3.1 at `/api/v1/openapi.json`, `/docs/api`, and a Postman collection generator.
+
+## Phase 5 — Agents (2026-11-02)
+- Penny: Gemini function calling over typed PayPal tools; mutating tools only return proposals (tested); Approval Cards execute through the UI routes.
+- Buyer concierge on the storefront, constrained to the stall's items.
+
+## Phase 4 — Invoice + Subscription (2026-11-02)
+- Invoice side-by-side (paper ↔ PayPal preview, hover-linked lines), send + QR, `/i/[id]` live status with backoff; paid invoices reach the ledger only when PayPal says so.
+- Catalog Product + Billing Plan (optional trial) and `/sub/[planId]` with the v6 subscribe button.
+
+## Phase 3 — Shop rail + Verify (2026-11-02)
+- Signed stall links, storefront with cart and PayPal JS SDK v6 button, server-priced orders paying the stall's payee, capture, buyer receipt with a signed QR.
+- `/verify`: camera scanner (BarcodeDetector or jsQR), counter mode, manual order id, `verifyOrder` with every fail reason, ledger write, Paid moment with a Web Audio "ka-ching".
+
+## Phase 2 — Capture + Read + Market check (2026-11-02)
+- `/new` (camera, upload, draw pad, samples), `/api/v1/ai/read`, `/new/read` with ink circles, stamp, editable items, questions, math/sanity/AUP checks, crops; Channel3 market check with price guard.
+- Gemini schema sanitiser (Gemini rejects `minItems`/`maxItems`); models chosen by `pnpm probe:gemini`.
+
+## Phase 1 — Plumbing (2026-11-02)
+- Typed PayPal REST client (token cache, idempotency, debug ids), receipts, Gemini client with backoff and repair, `scripts/probe-gemini.ts`, `/dev/health`.
+
 ## Phase 0 — Scaffold (2026-11-01)
-- Next.js 16.4.3 (App Router, TypeScript strict), pnpm, Tailwind CSS v4, shadcn/ui (Radix), restyled.
-- "Ink & Ledger" design tokens; Inter, Instrument Serif and Caveat via `next/font`; paper (light) and blueprint (dark) themes with a no-flash theme script.
-- zod-validated server env incl. `CHANNEL3_API_KEY`; `.env.example`.
-- Nonce CSP and security headers in `src/proxy.ts`; `cacheComponents` turned off for per-request nonces.
-- `src/core/{read,rails,verify,agent}` structure.
-- `/design` page: palette, type, buttons, cards, "ink is drying" skeleton, self-drawing ink circle, rubber stamp.
-- Vitest with CSP and ink-path tests; GitHub Actions CI (gitleaks, lint, typecheck, test, build).
-- Docs for the updated plan: Channel3 market check, verify-to-record, shadcn data-table ledger, global audience.
-- MIT LICENSE, README skeleton.
+- Next.js 16, pnpm, Tailwind v4, shadcn/ui; Ink & Ledger tokens, fonts, paper + blueprint themes; nonce CSP in `src/proxy.ts`; `/design`; vitest; CI; docs; MIT.

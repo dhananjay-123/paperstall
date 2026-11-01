@@ -1,23 +1,25 @@
 # Integrating Paperstall
 
-How a platform (PayPal, a POS, a marketplace) could adopt Paperstall. Sections marked _planned_ describe the
-design, not shipped code.
+How a platform (PayPal, a POS, a marketplace) could adopt Paperstall.
 
-## Today
-- Logic is being built in `src/core/*` (read, rails, verify, agent) with no Next.js imports; the web app is one consumer.
-- Each PayPal product sits behind a `Rail` interface (`src/core/rails`), so new rails (Payouts, Donations) plug in.
+## What's already reusable
+- **Core in `src/core`:** no Next.js imports. It holds the Read schema and checks, money math, stall signing, `verifyOrder`, market matching, Penny's tools and approval gate, and the OpenAPI generator. Any Node or edge runtime can use it.
+- **Versioned HTTP API** under `/api/v1`, documented at `/docs/api`. The OpenAPI 3.1 spec at `/api/v1/openapi.json` is generated from the same zod schemas, and `pnpm postman` turns it into a Postman collection.
+- **Rails** sit behind a `Rail` interface (`src/core/rails`); Payouts or Donations would be one more adapter.
+- **Receipts:** every response lists the PayPal, Gemini and Channel3 calls it made, with PayPal debug IDs, so an integrator can audit everything.
 
-## Planned
-- **Versioned HTTP API** (`/api/v1/...`) with an OpenAPI spec generated from the zod schemas, a docs page, and a public **Postman collection** generated from the spec (sandbox environment, no secrets).
-- **Embeddable "Snap to sell" widget**: a `<script>` / iframe a website or POS could drop in.
-- **Agent-ready stalls**: machine-readable stall + checkout endpoints and an MCP server; an agent can build a cart, a human approves the payment.
-
-## Real-world path
-- **Seller onboarding**: PayPal partner / multiparty onboarding replaces the typed payee email.
-- **Sync**: verified webhooks + a small store for cross-device ledgers.
-- **Distribution**: share to WhatsApp / Instagram; offline capture queue; more languages.
-- **Sandbox → live**: live credentials, live webhook IDs, real FX source instead of a seller-set rate.
+## Real-world path (honest effort estimates)
+| Step | What changes | Effort |
+|---|---|---|
+| Seller onboarding | PayPal partner / multiparty onboarding instead of a typed payee email; store the merchant id | 1–2 weeks |
+| Cross-device ledger | Verified PayPal webhooks (`CHECKOUT.ORDER.COMPLETED`, `INVOICING.INVOICE.PAID`) + a small store keyed by seller | 1 week |
+| Embeddable widget | `<script>`/iframe "Snap to sell" that posts the image to `/api/v1/ai/read` and returns a signed stall link | 3–5 days |
+| Sharing | WhatsApp / Instagram share sheets with the stall QR | 1–2 days |
+| Offline | Queue captures and verifications while offline; replay on reconnect | 1 week |
+| Languages | Translate UI copy; the Read already handles any script and returns English names | ongoing |
+| Sandbox → live | Live credentials, live webhook ids, a real FX source, production review of the acceptable-use check | 1 week |
 
 ## Why PayPal benefits
-Paper-based sellers get onto PayPal in under a minute with no forms; the AI picks the right PayPal product; every
-sale is verified against PayPal before it's recorded; and stalls are ready for agentic commerce.
+Paper-based sellers get onto PayPal in under a minute with no forms; the AI picks the right PayPal product; every sale
+is verified against PayPal before it's recorded, which defeats fake payment screenshots; and stalls are machine-readable,
+ready for agentic commerce.

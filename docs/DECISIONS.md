@@ -37,6 +37,21 @@ Short ADRs: context → decision → consequences.
 **Decision:** Build the ledger with shadcn's data table (TanStack Table).
 **Consequences:** One fewer dependency and licence; the ledger matches the rest of the design system.
 
+## ADR-009 — PayPal JS SDK v6 for checkout and subscriptions
+**Context:** The plan asked for v6 where it supports subscriptions.
+**Decision:** v6 ships a `paypal-subscriptions` component, so both rails use `@paypal/paypal-js/sdk-v6` and the official `<paypal-button>`.
+**Consequences:** One loader and one button component; CSP keeps `'strict-dynamic'` so the nonced loader can inject PayPal's script.
+
+## ADR-010 — Own typed PayPal tool layer instead of the Agent Toolkit
+**Context:** Penny runs on Gemini function calling with a strict approval gate.
+**Decision:** A small typed tool layer in `src/core/agent` mirrors the toolkit's operations. Mutating tools only return proposals and execute through our own approval-gated routes.
+**Consequences:** No framework coupling, and the gate is enforced by construction and unit-tested.
+
+## ADR-011 — TanStack Table v8 for the ledger
+**Context:** `@tanstack/react-table` v9 changed its API (`useTable`, feature registration); shadcn's data-table pattern is built on v8.
+**Decision:** Pin v8.
+**Consequences:** Stable, documented API; revisit when shadcn moves to v9.
+
 ## ADR-008 — Global audience
 **Context:** Paper-based small sellers exist everywhere; judges and sandbox accounts are US-based.
 **Decision:** No country-specific framing. Samples: coffee cart, a freelancer's bill, a piano-lessons notice, a phone-accessories stall and an optional Spanish menu. USD sandbox accounts; other currencies supported where PayPal supports them.
