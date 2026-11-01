@@ -1,10 +1,10 @@
 # Tasks
-_Last updated: 2026-11-01 · Current phase: 0 (awaiting "Phase 0 verified") · Days to deadline: 11_
+_Last updated: 2026-11-02 · Current phase: 1 (not started) · Days to deadline: 10_
 
 ## Now (this phase)
-- [ ] Human check of Phase 0: open `/` and `/design`, cycle the theme (system → paper → blueprint), press "Replay the Read"
-- [ ] Create the public GitHub repo `paperstall` and push (commands in the Phase 0 report; done by the human)
-- [ ] Add the MIT licence to the GitHub About section after the first push
+- [ ] Create the public GitHub repo `paperstall` and push (done by the human) — blocks CI's first run
+- [ ] Confirm MIT shows in the GitHub About section after the push
+- [ ] Add sandbox credentials to `.env.local` (PayPal client ID/secret, payee email, Gemini key, signing secret; Channel3 by Phase 2) — blocks Phase 1
 
 ## Next (upcoming phases, in order)
 
@@ -61,6 +61,7 @@ _Last updated: 2026-11-01 · Current phase: 0 (awaiting "Phase 0 verified") · D
 - [ ] Deploy to Vercel; README + all docs current
 
 ## Done
+- [x] Phase 0 signed off by the human — 2026-11-02 — "Phase 0 verified" after checking `/` and `/design` in the browser
 - [x] Next.js 16.4.3 + pnpm + Tailwind v4 + shadcn/ui (Radix, Nova preset, restyled) — 2026-11-01 — `pnpm build` passes; components render on `/design`
 - [x] Dependencies installed: zod, server-only, motion, lucide-react, sonner, vitest — 2026-11-01 — present in `package.json`; typecheck passes
 - [x] "Ink & Ledger" tokens, Inter + Instrument Serif + Caveat via `next/font`, paper + blueprint dark mode — 2026-11-01 — viewed `/design` in both themes in the browser
