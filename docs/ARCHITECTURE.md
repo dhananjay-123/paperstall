@@ -1,7 +1,7 @@
 # Architecture
 
 Paperstall has no database. Seller state lives on the seller's device; public storefronts live in the URL.
-This page describes what exists today; planned work is in [TASKS.md](TASKS.md).
+This page describes what exists today.
 
 ## Modules (today)
 

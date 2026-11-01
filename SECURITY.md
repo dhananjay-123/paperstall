@@ -1,7 +1,7 @@
 # Security
 
 Paperstall handles payments, so it is built like a payments product. This file describes what exists today; the
-rest of the plan is tracked in `docs/TASKS.md`.
+"Planned" section lists what is not built yet.
 
 ## In place
 - **Secrets**: `GEMINI_API_KEY`, `PAYPAL_CLIENT_SECRET`, `PAYLOAD_SIGNING_SECRET` and `CHANNEL3_API_KEY` are read only in `src/lib/env.ts`, which imports `server-only` (a build error if a client component imports it) and validates with zod. `.env*` is git-ignored except `.env.example`, which has keys and no values. `MOCK_AI=1` is refused in production.

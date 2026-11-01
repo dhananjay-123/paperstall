@@ -40,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# internal working files: kept locally, not published
+docs/TASKS.md
+docs/DEMO.md
+AGENTS.md
+CLAUDE.md
+.claude/

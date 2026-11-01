@@ -43,8 +43,8 @@ Checks: `pnpm lint && pnpm typecheck && pnpm test && pnpm build`.
 
 ## Docs
 [Architecture](docs/ARCHITECTURE.md) · [PayPal integration](docs/PAYPAL-INTEGRATION.md) · [AI](docs/AI.md) ·
-[Decisions](docs/DECISIONS.md) · [Integrate](docs/INTEGRATE.md) · [Demo](docs/DEMO.md) · [Security](SECURITY.md) ·
-[Tasks](docs/TASKS.md) · [Changelog](CHANGELOG.md)
+[Decisions](docs/DECISIONS.md) · [Integrate](docs/INTEGRATE.md) · [Security](SECURITY.md) ·
+[Changelog](CHANGELOG.md)
 
 ## License
 [MIT](LICENSE)
