@@ -172,14 +172,20 @@ function buildProposal(p: AgentProposal, stall: Stall, ledger: { n: number; entr
   }
 
   if (p.tool === "refund_capture" || p.tool === "add_tracking") {
-    const row = ledger.find((l) => l.entry.id === a.orderId);
+    const ref = String(a.order ?? "").trim();
+    const row = ledger.find((l) => l.entry.id === ref || String(l.n) === ref.replace(/^#/, ""));
     const l = row?.entry;
     if (!l?.captureId) return null;
     const lc = (isPayPalCurrency(l.currency) ? l.currency : cur) as CurrencyCode;
     if (p.tool === "refund_capture") {
       const remaining = l.totalMinor - (l.refundedMinor ?? 0);
       const n = row?.n ?? 0;
-      const asked = typeof a.amount === "number" ? Math.min(remaining, toMinor(a.amount, lc)) : remaining;
+      const asked =
+        typeof a.fraction === "number"
+          ? Math.min(remaining, Math.round(l.totalMinor * a.fraction))
+          : typeof a.amount === "number"
+            ? Math.min(remaining, toMinor(a.amount, lc))
+            : remaining;
       return {
         card: {
           id: p.id,

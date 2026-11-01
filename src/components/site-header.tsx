@@ -11,10 +11,16 @@ export function SiteHeader() {
         </Link>
         <nav className="flex items-center gap-1 text-sm">
           <Link
-            href="/design"
+            href="/new"
             className="rounded-md px-2.5 py-1.5 text-muted-foreground hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
           >
-            Design
+            New
+          </Link>
+          <Link
+            href="/studio"
+            className="rounded-md px-2.5 py-1.5 text-muted-foreground hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
+          >
+            My stalls
           </Link>
           <ThemeToggle />
         </nav>

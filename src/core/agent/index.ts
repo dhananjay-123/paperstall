@@ -27,13 +27,19 @@ export const TOOLS = {
   cancel_invoice: { effect: "mutate", description: "Propose cancelling a sent invoice.", args: z.object({ invoiceId: z.string().max(40), note: z.string().max(400).optional() }) },
   refund_capture: {
     effect: "mutate",
-    description: "Propose a full or partial refund of a ledger order. amount is in the order currency; omit for a full refund.",
-    args: z.object({ orderId: z.string().max(40), amount: z.number().positive().optional(), reason: z.string().max(200).optional() }),
+    description:
+      "Propose a refund of a ledger order. order = the ledger number (\"3\") or PayPal order id. Use fraction for parts (half = 0.5) or amount in the order currency; omit both for a full refund.",
+    args: z.object({
+      order: z.string().max(40),
+      fraction: z.number().gt(0).max(1).optional(),
+      amount: z.number().positive().optional(),
+      reason: z.string().max(200).optional(),
+    }),
   },
   add_tracking: {
     effect: "mutate",
-    description: "Propose adding shipment tracking to a ledger order.",
-    args: z.object({ orderId: z.string().max(40), trackingNumber: z.string().min(3).max(64), carrier: z.string().min(2).max(64) }),
+    description: "Propose adding shipment tracking to a ledger order. order = the ledger number or PayPal order id.",
+    args: z.object({ order: z.string().max(40), trackingNumber: z.string().min(3).max(64), carrier: z.string().min(2).max(64) }),
   },
   create_invoice_from_text: {
     effect: "mutate",

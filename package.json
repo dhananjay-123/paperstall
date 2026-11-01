@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "probe:gemini": "tsx --env-file=.env.local scripts/probe-gemini.ts"
+    "probe:gemini": "tsx --env-file=.env.local scripts/probe-gemini.ts",
+    "postman": "tsx scripts/postman.ts"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",

@@ -1,0 +1,417 @@
+{
+  "info": {
+    "name": "Paperstall API (sandbox)",
+    "description": "Paper → intent → PayPal rail. Sandbox only. Every response carries `receipts`: the outbound PayPal/Gemini/Channel3 calls it made, with PayPal debug IDs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    }
+  ],
+  "item": [
+    {
+      "name": "Read a photo of paper",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/ai/read",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "ai",
+            "read"
+          ]
+        },
+        "description": "Image → structured Read (intent, items with 0–1000 boxes, currency, questions, warnings) plus an acceptable-use check. Rate-limited per IP.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Market check for branded items (Channel3)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/market",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "market"
+          ]
+        },
+        "description": "Market check for branded items (Channel3)",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currency\": \"\",\n  \"items\": [\n    {\n      \"id\": \"\",\n      \"query\": \"\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Sign a stall so it can take payments",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/stalls/sign",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "stalls",
+            "sign"
+          ]
+        },
+        "description": "Sign a stall so it can take payments",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"payload\": {\n    \"id\": \"\",\n    \"n\": \"\",\n    \"c\": \"\",\n    \"p\": \"\",\n    \"i\": [\n      {\n        \"id\": \"\",\n        \"name\": \"\",\n        \"price\": 0\n      }\n    ]\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Check a stall link's signature and expiry",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/stalls/check",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "stalls",
+            "check"
+          ]
+        },
+        "description": "Check a stall link's signature and expiry",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"signed\": \"\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Create a PayPal order from a signed stall and a cart",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "orders"
+          ]
+        },
+        "description": "Prices are recomputed on the server from the signed stall; client totals are ignored. The stall's payee receives the money.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"signed\": \"\",\n  \"cart\": [\n    {\n      \"id\": \"\",\n      \"qty\": 0\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Capture an approved order and get the signed receipt code",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders/capture",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "orders",
+            "capture"
+          ]
+        },
+        "description": "Capture an approved order and get the signed receipt code",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"signed\": \"\",\n  \"orderId\": \"\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Verify a payment with PayPal before recording it",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/verify",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "verify"
+          ]
+        },
+        "description": "Checks order + capture status, payee, amount, currency, stall and replay. Send a scanned receipt `code` or a typed `orderId`.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"signed\": \"\",\n  \"recorded\": {\n    \"orderIds\": [\n      \"\"\n    ],\n    \"captureIds\": [\n      \"\"\n    ]\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Create, send and QR a PayPal invoice",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/invoices",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "invoices"
+          ]
+        },
+        "description": "Create, send and QR a PayPal invoice",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currency\": \"\",\n  \"recipient\": {\n    \"email\": \"\"\n  },\n  \"items\": [\n    {\n      \"name\": \"\",\n      \"quantity\": 0,\n      \"unitMinor\": 0\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Create a Catalog Product + active Billing Plan",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/plans",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "plans"
+          ]
+        },
+        "description": "Create a Catalog Product + active Billing Plan",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"\",\n  \"currency\": \"\",\n  \"priceMinor\": 0,\n  \"interval\": \"week\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Create a subscription for approval, or read its status",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/subscriptions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "subscriptions"
+          ]
+        },
+        "description": "Create a subscription for approval, or read its status",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"planId\": \"\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Buyer concierge: request → cart proposal from this stall's items only",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/ai/concierge",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "ai",
+            "concierge"
+          ]
+        },
+        "description": "Buyer concierge: request → cart proposal from this stall's items only",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"signed\": \"\",\n  \"ask\": \"\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Penny, the seller's clerk",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/ai/penny",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "ai",
+            "penny"
+          ]
+        },
+        "description": "Gemini function calling over PayPal tools. Mutating tools return proposals only; they execute through the routes above after the seller approves.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"text\": \"\"\n    }\n  ],\n  \"context\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -23,11 +23,11 @@ describe("approval gate", () => {
   it("never executes a mutating tool: it returns a proposal and calls no executor", async () => {
     const r = readers();
     const args: Record<string, unknown> = {
-      add_tracking: { orderId: "O1", trackingNumber: "1Z999", carrier: "UPS" },
+      add_tracking: { order: "2", trackingNumber: "1Z999", carrier: "UPS" },
       cancel_invoice: { invoiceId: "INV2-AAAA-BBBB-CCCC-DDDD" },
       create_invoice_from_text: { customerName: "Northwind", items: [{ name: "Cards", quantity: 200, unitPrice: 0.2 }] },
       create_payment_link_for_items: { name: "Mug", price: 12 },
-      refund_capture: { orderId: "O1", amount: 2 },
+      refund_capture: { order: "3", fraction: 0.5 },
       send_invoice_reminder: { invoiceId: "INV2-AAAA-BBBB-CCCC-DDDD" },
     };
     for (const name of mutating) {
@@ -46,7 +46,8 @@ describe("approval gate", () => {
   it("rejects unknown tools and invalid arguments without running anything", async () => {
     const r = readers();
     expect(await runTool("transfer_all_money", {}, r)).toMatchObject({ kind: "error" });
-    expect(await runTool("refund_capture", { orderId: "O1", amount: -5 }, r)).toMatchObject({ kind: "error" });
+    expect(await runTool("refund_capture", { order: "3", amount: -5 }, r)).toMatchObject({ kind: "error" });
+    expect(await runTool("refund_capture", { order: "3", fraction: 1.5 }, r)).toMatchObject({ kind: "error" });
     expect(await runTool("sales_summary", { period: "forever" }, r)).toMatchObject({ kind: "error" });
     for (const fn of Object.values(r)) expect(fn).not.toHaveBeenCalled();
   });
