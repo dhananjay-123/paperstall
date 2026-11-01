@@ -19,7 +19,8 @@ export function buildCsp(nonce: string, isDev: boolean): string {
     // Server-rendered style="" attributes (React, motion) can't carry a nonce, so styles allow
     // inline. Scripts stay nonce-only, which is where XSS risk lives.
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "blob:", "data:", ...PAYPAL_IMG],
+    // Market-check product photos come from many retailer CDNs; images cannot run script.
+    "img-src": ["'self'", "blob:", "data:", "https:", ...PAYPAL_IMG],
     "font-src": ["'self'"],
     "connect-src": ["'self'", ...PAYPAL_CONNECT, ...(isDev ? ["ws:"] : [])],
     "frame-src": PAYPAL_FRAME,

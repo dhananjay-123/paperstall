@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import type { MarketMatch } from "@/core/market";
 import type { Receipt } from "@/core/receipts";
 import type { Read } from "@/core/read/schema";
 import type { StallItem, Stall } from "@/core/stall";
@@ -71,6 +72,12 @@ export type DraftRead = {
   startedAt: number;
   publishedAt?: number;
   edits: number;
+  currency?: string; // seller's choice when the paper's currency is unclear or unsupported
+  aup?: { id: string; reason: string }[];
+  aupChecked?: boolean;
+  market?: Record<string, MarketMatch | null>;
+  usePhoto?: Record<string, boolean>;
+  answered?: string[];
 };
 
 type State = {

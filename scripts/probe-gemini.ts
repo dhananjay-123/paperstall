@@ -1,5 +1,5 @@
 // Lists the Gemini models this key can use and times one vision+JSON call and one
-// function-calling call per candidate. Run: pnpm probe:gemini
+// function-calling call per candidate. Run: pnpm probe:gemini [model ...]
 import { GoogleGenAI, Type } from "@google/genai";
 import { deflateSync } from "node:zlib";
 
@@ -58,7 +58,8 @@ async function main() {
   }
   console.log(`Models with generateContent (${names.length}):\n  ${names.join("\n  ")}\n`);
 
-  const candidates = names.filter((n) => /gemini-(\d|flash|pro)/.test(n) && !/(tts|image|embedding|live|audio|native)/.test(n)).slice(0, 8);
+  const requested = process.argv.slice(2);
+  const candidates = requested.length ? requested : names.filter((n) => /gemini-(\d|flash|pro)/.test(n) && !/(tts|image|embedding|live|audio|native)/.test(n)).slice(0, 8);
   const image = png(64, 48);
 
   for (const model of candidates) {
