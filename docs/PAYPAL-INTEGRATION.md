@@ -33,6 +33,19 @@ OpenAPI specs (orders v2, invoicing v2, catalog-products v1, subscriptions v1, p
 - **QR response media type isn't declared** in the invoicing spec. We extract the base64 PNG whether it comes raw or wrapped in a multipart body (`extractBase64Png`).
 - **Payee-email model:** one platform credential creates orders that pay the stall's own PayPal account ([ADR-002](DECISIONS.md)).
 
-## Not yet verified against the live sandbox
-PayPal credentials weren't available while this was built, so the calls above are typed and unit-tested around, but the
-sandbox run (`/dev/health`, a full checkout, invoice send, plan creation) is still to be done. Findings will be added here.
+## Verified against the live sandbox (2026-11-02)
+Through `/dev/health`: OAuth, order create, buyer approval with a sandbox personal account, capture (`COMPLETED`),
+and draft invoice create + delete.
+
+Findings:
+- **Use US sandbox accounts.** The accounts PayPal auto-creates follow your developer account's country (IN for us).
+  Paperstall charges in USD, so we created a US business account (payee, and the app's account) and a US personal
+  account (buyer).
+- **Enable Invoicing on the app.** Without it, invoice calls fail with `NOT_AUTHORIZED` ("insufficient permissions")
+  while orders still work. The token's `scope` must include `https://uri.paypal.com/services/invoicing`.
+- **New app features don't reach an existing token.** PayPal keeps returning the same access token (up to ~9 h) for
+  `client_credentials`, so a feature enabled after that token was issued doesn't apply. End it with
+  `POST /v1/oauth2/token/terminate`, then restart the server so our in-memory token cache is dropped too.
+
+Not yet run live: invoice send and QR, catalog product + billing plan + subscribe, refund, and the full storefront
+checkout → receipt → `/verify` flow.

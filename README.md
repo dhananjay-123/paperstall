@@ -61,6 +61,7 @@ pnpm dev
 ```
 - Checks: `pnpm lint && pnpm typecheck && pnpm test && pnpm build`.
 - Plumbing check (dev only): `/dev/health`.
+- PayPal sandbox setup: use **US** sandbox business (payee) and personal (buyer) accounts, and create the app on that business account with Invoicing and Subscriptions enabled. If you enable a feature after the server has fetched a token, restart it (see [docs/PAYPAL-INTEGRATION.md](docs/PAYPAL-INTEGRATION.md)).
 - Pick Gemini models: `pnpm probe:gemini`.
 
 ## Known limitations

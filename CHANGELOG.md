@@ -1,5 +1,9 @@
 # Changelog
 
+## Sandbox verification + market check fix (2026-11-02)
+- PayPal sandbox verified live via `/dev/health`: OAuth, order create, buyer approval, capture, draft invoice create + delete. Findings in `docs/PAYPAL-INTEGRATION.md`.
+- Channel3 verified live. The market check now pools single-store listings of the same product, so price chips show for most branded items (7 of 8 test products, up from 1); near-miss models stay out.
+
 ## Phase 6 (part) — Studio and finish (2026-11-02)
 - Landing page with the judge quick path (sandbox buyer from env), navigation, PWA manifest and icon.
 - Studio: overview (today's takings, pending invoices, photo→published metric), share card + printable A5 poster, ledger (TanStack Table v8: search, status filter, CSV, sticky header, mobile cards, approval-gated refund/track/remind), settings (payee, display currency + seller-set rate, sound, export/import/reset).
