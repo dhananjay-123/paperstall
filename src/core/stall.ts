@@ -28,6 +28,7 @@ export const StallPayload = z.object({
   i: z.array(StallItem).min(1).max(40),
   t: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(), // ink colour
   l: z.string().max(12).optional(), // source language
+  r: z.number().int().min(0).max(5000).optional(), // tax rate in basis points (702 = 7.02%), from the paper
   x: z.number().int().positive(), // expiry, unix seconds
 });
 export type StallPayload = z.infer<typeof StallPayload>;
@@ -50,9 +51,18 @@ export const Cart = z.array(z.object({ id: z.string().max(24), qty: z.number().i
 export type PricedCart = {
   currency: CurrencyCode;
   lines: { item: StallItem; qty: number; lineMinor: number }[];
+  itemsMinor: number;
+  taxMinor: number;
   totalMinor: number;
-  total: string; // PayPal decimal
+  itemTotal: string; // PayPal decimals
+  taxTotal: string;
+  total: string;
 };
+
+/** Tax on a subtotal at a basis-point rate, rounded half-up to the minor unit. */
+export function taxOn(itemsMinor: number, rateBp = 0): number {
+  return Math.round((itemsMinor * rateBp) / 10_000);
+}
 
 /** Prices a cart purely from the stall payload. Client-sent prices are never used. */
 export function priceCart(stall: StallPayload, cart: CartLine[]): PricedCart {
@@ -67,6 +77,17 @@ export function priceCart(stall: StallPayload, cart: CartLine[]): PricedCart {
   });
   if (!lines.length) throw new Error("Cart is empty");
   const currency = stall.c as CurrencyCode;
-  const totalMinor = sumLines(lines.map((l) => ({ unitMinor: l.item.price, quantity: l.qty })));
-  return { currency, lines, totalMinor, total: toPayPalValue(totalMinor, currency) };
+  const itemsMinor = sumLines(lines.map((l) => ({ unitMinor: l.item.price, quantity: l.qty })));
+  const taxMinor = taxOn(itemsMinor, stall.r);
+  const totalMinor = itemsMinor + taxMinor;
+  return {
+    currency,
+    lines,
+    itemsMinor,
+    taxMinor,
+    totalMinor,
+    itemTotal: toPayPalValue(itemsMinor, currency),
+    taxTotal: toPayPalValue(taxMinor, currency),
+    total: toPayPalValue(totalMinor, currency),
+  };
 }

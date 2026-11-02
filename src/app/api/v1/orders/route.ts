@@ -30,7 +30,8 @@ export async function POST(req: NextRequest) {
     const order = await createOrder(
       {
         currency: priced.currency,
-        itemTotal: priced.total,
+        itemTotal: priced.itemTotal,
+        ...(priced.taxMinor > 0 ? { taxTotal: priced.taxTotal, total: priced.total } : {}),
         payeeEmail: stall.p,
         customId: stall.id,
         invoiceId: `ps-${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`,

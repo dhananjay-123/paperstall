@@ -7,7 +7,7 @@ import { PayPalButton } from "@/components/paypal/paypal-button";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/core/money";
 import { peekStall } from "@/core/peek";
-import type { StallItem, StallPayload } from "@/core/stall";
+import { taxOn, type StallItem, type StallPayload } from "@/core/stall";
 import { api, ApiCallError } from "@/lib/api-client";
 import { itemArtKey, useStore } from "@/lib/store";
 import { saveBuyerReceipt } from "@/lib/buyer-receipts";
@@ -76,7 +76,9 @@ function Shop({ stall, signed, check }: { stall: StallPayload; signed: string; c
   const sound = useStore((s) => s.settings.sound);
 
   const lines = stall.i.filter((i) => (cart[i.id] ?? 0) > 0).map((i) => ({ item: i, qty: cart[i.id] }));
-  const total = lines.reduce((n, l) => n + l.item.price * l.qty, 0);
+  const subtotal = lines.reduce((n, l) => n + l.item.price * l.qty, 0);
+  const tax = taxOn(subtotal, stall.r);
+  const total = subtotal + tax;
   const count = lines.reduce((n, l) => n + l.qty, 0);
   const blocked = check && !check.ok;
   const set = (id: string, qty: number) => setCart((c) => ({ ...c, [id]: Math.max(0, Math.min(99, qty)) }));
@@ -193,7 +195,10 @@ function Shop({ stall, signed, check }: { stall: StallPayload; signed: string; c
           <div className="flex items-center gap-2">
             <ShoppingBag className="size-5 text-ink" />
             <span className="text-sm text-muted-foreground">{count ? `${count} item${count > 1 ? "s" : ""}` : "Your cart is empty"}</span>
-            <span className="ml-auto font-serif text-2xl tabular-nums sm:ml-3">{formatMoney(total, stall.c)}</span>
+            <span className="ml-auto text-right sm:ml-3">
+              <span className="block font-serif text-2xl tabular-nums">{formatMoney(total, stall.c)}</span>
+              {tax > 0 ? <span className="block text-xs text-muted-foreground tabular-nums">incl. {formatMoney(tax, stall.c)} tax</span> : null}
+            </span>
           </div>
           <div className="w-full sm:ml-auto sm:w-72">
             {error ? (

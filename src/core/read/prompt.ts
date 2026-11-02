@@ -16,6 +16,8 @@ Rules:
   unitPrice is the per-unit price as a number in the detected currency. For invoices, quantity = units.
   For subscriptions, interval = week/month/year.
 - box: tight [ymin, xmin, ymax, xmax] around the item's line on the page, each 0–1000.
+- Tax lines (Tax, Sales tax, VAT, GST, IVA…) are NOT items: put the written tax amount in tax. Subtotal and total
+  lines are not items either.
 - writtenTotal: only if a total is written on the paper, exactly as written (do NOT recompute it).
   writtenTotalBox: where that total is.
 - currency: ISO 4217 code if you can tell; symbolSeen as written; confidence 0–1. "$" alone is ambiguous

@@ -7,7 +7,7 @@ import { InkCircle, type Box } from "@/components/ink/ink-circle";
 import { Stamp } from "@/components/ink/stamp";
 import { Button } from "@/components/ui/button";
 import { formatMoney, toMinor } from "@/core/money";
-import { mathCheck } from "@/core/read/checks";
+import { mathCheck, taxMinorOf } from "@/core/read/checks";
 import { api, ApiCallError } from "@/lib/api-client";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -40,10 +40,12 @@ export function InvoicePublish() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const lines = useMemo(
-    () => read.items.filter((i) => i.unitPrice > 0).map((i) => ({ id: i.id, box: i.box, name: i.nameEn, quantity: Math.max(1, Math.round(i.quantity ?? 1)), unitMinor: toMinor(i.unitPrice, currency) })),
-    [read.items, currency],
-  );
+  // The paper's tax goes on the invoice as its own line, so PayPal's total matches the paper exactly.
+  const lines = useMemo(() => {
+    const items = read.items.filter((i) => i.unitPrice > 0).map((i) => ({ id: i.id, box: i.box, name: i.nameEn, quantity: Math.max(1, Math.round(i.quantity ?? 1)), unitMinor: toMinor(i.unitPrice, currency) }));
+    const tax = taxMinorOf(read, currency);
+    return tax > 0 ? [...items, { id: "tax", box: [0, 0, 0, 0], name: "Tax", quantity: 1, unitMinor: tax }] : items;
+  }, [read, currency]);
   const total = lines.reduce((n, l) => n + l.unitMinor * l.quantity, 0);
   const math = mathCheck(read, currency);
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -98,7 +100,7 @@ export function InvoicePublish() {
           {/* eslint-disable-next-line @next/next/no-img-element -- the seller's own photo */}
           <img src={draft.imageDataUrl} alt="Your handwritten bill" className="block h-auto w-full" />
           {lines.map((l, i) =>
-            hover === l.id ? <InkCircle key={`${l.id}-${hover}`} box={l.box as unknown as Box} seed={i + 5} color="var(--action)" /> : null,
+            hover === l.id && l.id !== "tax" ? <InkCircle key={`${l.id}-${hover}`} box={l.box as unknown as Box} seed={i + 5} color="var(--action)" /> : null,
           )}
         </div>
         <div className="space-y-3 rounded-xl border bg-card p-4 text-sm shadow-sm">

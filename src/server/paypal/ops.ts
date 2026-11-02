@@ -10,6 +10,9 @@ export type OrderLine = { name: string; quantity: number; unitValue: string; des
 export type CreateOrderInput = {
   currency: string;
   itemTotal: string;
+  /** Omitted when there's no tax; then the order total is the item total. */
+  taxTotal?: string;
+  total?: string;
   lines: OrderLine[];
   payeeEmail: string;
   customId: string;
@@ -35,8 +38,11 @@ export function createOrder(input: CreateOrderInput, ctx: Ctx = {}) {
           payee: { email_address: input.payeeEmail },
           amount: {
             currency_code: input.currency,
-            value: input.itemTotal,
-            breakdown: { item_total: { currency_code: input.currency, value: input.itemTotal } },
+            value: input.total ?? input.itemTotal,
+            breakdown: {
+              item_total: { currency_code: input.currency, value: input.itemTotal },
+              ...(input.taxTotal ? { tax_total: { currency_code: input.currency, value: input.taxTotal } } : {}),
+            },
           },
           items: input.lines.map((l) => ({
             name: l.name.slice(0, 127),

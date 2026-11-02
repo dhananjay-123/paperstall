@@ -30,9 +30,9 @@ export function inkCirclePath(box: Box, seed = 1, width = 1000, height = 1000): 
   const rand = mulberry32(seed);
   const cx = ((xmin + xmax) / 2) * sx;
   const cy = ((ymin + ymax) / 2) * sy;
-  // Pad so the stroke sits around the text rather than through it.
+  // Pad so the stroke sits around the text rather than through it; kept small for tightly packed receipts.
   const rx = ((xmax - xmin) / 2) * sx + 12;
-  const ry = ((ymax - ymin) / 2) * sy + 8;
+  const ry = ((ymax - ymin) / 2) * sy + 5;
   const start = -Math.PI / 2 - 0.5 + rand() * 0.4;
   // A hand overshoots: go a little past a full turn.
   const sweep = Math.PI * 2 + 0.35 + rand() * 0.25;
@@ -85,19 +85,19 @@ export function InkCircle({ box, seed = 1, delay = 0, color = "var(--action)", p
   const path = useMemo(() => (size ? inkCirclePath(box, seed, size.w, size.h) : null), [box, seed, size]);
 
   return (
-    <svg ref={ref} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
+    <svg ref={ref} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full overflow-visible mix-blend-multiply dark:mix-blend-normal">
       {path ? (
         <motion.path
           key={playKey}
           d={path.d}
           fill="none"
           stroke={color}
-          strokeWidth={3}
+          strokeWidth={1.75}
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeDasharray={path.length}
           initial={reduce ? false : { strokeDashoffset: path.length, opacity: 0.2 }}
-          animate={{ strokeDashoffset: 0, opacity: 0.9 }}
+          animate={{ strokeDashoffset: 0, opacity: 0.6 }}
           transition={{ duration: 0.7, delay, ease: [0.65, 0, 0.35, 1] }}
         />
       ) : null}

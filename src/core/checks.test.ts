@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bestMatch, matchConfidence, priceGuard, type C3Product } from "./market";
-import { mathCheck, sanityFlags } from "./read/checks";
+import { mathCheck, sanityFlags, taxRateBp } from "./read/checks";
 import type { Read } from "./read/schema";
 
 const base: Read = {
@@ -31,6 +31,21 @@ describe("mathCheck", () => {
   it("passes a correct total and returns null with no written total", () => {
     expect(mathCheck({ ...base, items: [item("a", "A", 0.1, 3)], writtenTotal: 0.3 }, "USD")?.ok).toBe(true);
     expect(mathCheck({ ...base, items: [item("a", "A", 1)] }, "USD")).toBeNull();
+  });
+});
+
+describe("tax", () => {
+  // A real restaurant receipt: 8.40 + 7.40 + 4.97 + 0.44 = 21.21, tax 1.49, total 22.70.
+  const receipt = { ...base, items: [item("a", "Pork Pillows", 8.4), item("b", "Shrimp Sub", 7.4), item("c", "Smoothie", 4.97), item("d", "Lychee", 0.44)], writtenTotal: 22.7 };
+  it("counts the written tax toward the total", () => {
+    expect(mathCheck(receipt, "USD")?.ok).toBe(false);
+    expect(mathCheck({ ...receipt, tax: 1.49 }, "USD")).toEqual({ written: 2270, computed: 2270, ok: true });
+  });
+  it("turns the tax into a rate that reproduces it on the same subtotal", () => {
+    const bp = taxRateBp({ ...receipt, tax: 1.49 }, "USD");
+    expect(bp).toBeGreaterThan(700);
+    expect(Math.round((2121 * bp) / 10_000)).toBe(149);
+    expect(taxRateBp(receipt, "USD")).toBe(0);
   });
 });
 

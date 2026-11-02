@@ -2,7 +2,7 @@
 // Pure and framework-free so a POS or another platform can run the same rules.
 
 import { fromPayPalValue, isPayPalCurrency, type CurrencyCode } from "../money";
-import type { StallPayload } from "../stall";
+import { taxOn, type StallPayload } from "../stall";
 
 export type VerdictReason =
   | "not_paid"
@@ -85,7 +85,8 @@ export function verifyOrder(order: OrderFacts, stall: StallPayload, recorded: Re
   }
   const captured = fromPayPalValue(capture.amount.value, currency);
   const orderTotal = fromPayPalValue(pu.amount.value, currency);
-  if (!items.length || expected !== orderTotal || captured !== expected) return fail("amount_mismatch");
+  const total = expected + taxOn(expected, stall.r);
+  if (!items.length || total !== orderTotal || captured !== total) return fail("amount_mismatch");
 
-  return { ok: true, orderId: order.id, captureId: capture.id, currency, totalMinor: expected, items, paidAt: capture.create_time };
+  return { ok: true, orderId: order.id, captureId: capture.id, currency, totalMinor: total, items, paidAt: capture.create_time };
 }

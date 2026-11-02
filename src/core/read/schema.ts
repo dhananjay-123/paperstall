@@ -46,6 +46,7 @@ export const Read = z.object({
     .optional(),
   dates: z.object({ issued: z.string().max(40).optional(), due: z.string().max(40).optional() }).optional(),
   writtenTotal: z.number().optional(),
+  tax: z.number().optional().describe("Tax amount written on the paper (tax, VAT, GST, sales tax), if any. Never an item"),
   writtenTotalBox: Box.optional().describe("Where the written total is on the page, if any"),
   taxOrNotes: z.string().max(300).optional(),
   questions: z

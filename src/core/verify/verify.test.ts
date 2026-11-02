@@ -82,4 +82,14 @@ describe("verifyOrder", () => {
     });
     expect(verifyOrder(order(), stall, { orderIds: [], captureIds: ["CAP1"] })).toMatchObject({ reason: "already_recorded" });
   });
+
+  it("includes the stall's tax rate in the expected total", () => {
+    const taxed = { ...stall, r: 700 }; // 7%: 11.00 + 0.77
+    const paid = order({
+      amount: { currency_code: "USD", value: "11.77" },
+      payments: { captures: [{ id: "CAP1", status: "COMPLETED", amount: { currency_code: "USD", value: "11.77" } }] },
+    });
+    expect(verifyOrder(paid, taxed)).toMatchObject({ ok: true, totalMinor: 1177 });
+    expect(verifyOrder(order(), taxed)).toMatchObject({ reason: "amount_mismatch" });
+  });
 });

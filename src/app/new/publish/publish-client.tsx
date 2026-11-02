@@ -10,6 +10,7 @@ import { formatMoney } from "@/core/money";
 import { peekStall } from "@/core/peek";
 import type { Stall } from "@/core/stall";
 import { api, ApiCallError } from "@/lib/api-client";
+import { taxRateBp } from "@/core/read/checks";
 import { stallItemsFromRead } from "@/lib/from-read";
 import { cropBox, downscale } from "@/lib/image";
 import { itemArtKey, useStore } from "@/lib/store";
@@ -78,6 +79,7 @@ function ShopPublish({ defaultPayee }: { defaultPayee: string }) {
         }),
         t: ink,
         l: read.sourceLanguage.slice(0, 12),
+        ...(taxRateBp(read, currency) > 0 ? { r: taxRateBp(read, currency) } : {}),
       };
       const { signed } = await api<{ signed: string }>("/api/v1/stalls/sign", { body: { payload } });
       // The seller's own handwriting becomes each item's art (kept on this device).

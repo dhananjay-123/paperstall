@@ -19,12 +19,24 @@ export function computedTotalMinor(read: Read, currency: CurrencyCode): number {
   return read.items.reduce((n, it) => n + lineMinor(it, currency), 0);
 }
 
+export function taxMinorOf(read: Read, currency: CurrencyCode): number {
+  return read.tax && read.tax > 0 ? toMinor(read.tax, currency) : 0;
+}
+
+/** The paper's tax as a rate on its subtotal, in basis points, so it can be applied to any cart. */
+export function taxRateBp(read: Read, currency: CurrencyCode): number {
+  const items = computedTotalMinor(read, currency);
+  const tax = taxMinorOf(read, currency);
+  return items > 0 && tax > 0 ? Math.min(5000, Math.round((tax / items) * 10_000)) : 0;
+}
+
 export type MathCheck = { written: number; computed: number; ok: boolean } | null;
 
+/** Written total vs. lines + written tax. */
 export function mathCheck(read: Read, currency: CurrencyCode): MathCheck {
   if (read.writtenTotal === undefined || read.writtenTotal === null) return null;
   const written = toMinor(read.writtenTotal, currency);
-  const computed = computedTotalMinor(read, currency);
+  const computed = computedTotalMinor(read, currency) + taxMinorOf(read, currency);
   return { written, computed, ok: written === computed };
 }
 
