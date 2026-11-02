@@ -120,13 +120,13 @@ export function VerifyClient({ initialStall }: { initialStall?: string }) {
         {stall ? <span className="ml-auto font-medium tabular-nums">Today: {formatMoney(takings, stall.payload.c)}</span> : null}
       </div>
 
-      {result ? <ResultCard result={result} title={stall?.payload.n ?? "Paid"} /> : null}
+      {result ? <ResultCard result={result} title={stall?.payload.n ?? "Paid"} stallId={stall?.id} /> : null}
 
       {camera ? (
         <Scanner paused={busy} onCode={(code) => void check({ code })} />
       ) : (
         <Button variant="action" size="lg" className="h-14 w-full text-base" onClick={() => setCamera(true)}>
-          Scan the buyer&apos;s receipt
+          {result ? "Scan the next receipt" : "Scan the buyer’s receipt"}
         </Button>
       )}
 
@@ -157,7 +157,7 @@ export function VerifyClient({ initialStall }: { initialStall?: string }) {
   );
 }
 
-function ResultCard({ result, title }: { result: Result; title: string }) {
+function ResultCard({ result, title, stallId }: { result: Result; title: string; stallId?: string }) {
   if ("error" in result) {
     return (
       <div role="alert" className="rounded-2xl border border-warning/50 bg-card p-5">
@@ -175,6 +175,17 @@ function ResultCard({ result, title }: { result: Result; title: string }) {
           <CheckCircle2 className="size-7" /> Paid {formatMoney(v.totalMinor, v.currency)}
         </p>
         <PaidReceipt title={title} totalMinor={v.totalMinor} currency={v.currency} items={v.items} at={v.paidAt} orderId={v.orderId} playKey={result.at} />
+        <p className="text-center text-sm text-muted-foreground">
+          Saved to your ledger. Hand over the order.
+          {stallId ? (
+            <>
+              {" "}
+              <Link href={`/studio/${stallId}`} className="text-action underline">
+                Open the ledger
+              </Link>
+            </>
+          ) : null}
+        </p>
       </div>
     );
   }

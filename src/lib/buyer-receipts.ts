@@ -36,6 +36,11 @@ export function saveBuyerReceipt(r: BuyerReceipt) {
 
 const memory = new Map<string, BuyerReceipt>();
 
+/** Returns the same object on every call (useSyncExternalStore needs a stable snapshot). */
 export function findBuyerReceipt(orderId: string): BuyerReceipt | undefined {
-  return memory.get(orderId) ?? loadBuyerReceipts().find((r) => r.orderId === orderId);
+  const hit = memory.get(orderId);
+  if (hit) return hit;
+  const stored = loadBuyerReceipts().find((r) => r.orderId === orderId);
+  if (stored) memory.set(orderId, stored);
+  return stored;
 }
