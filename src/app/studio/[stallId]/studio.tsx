@@ -8,7 +8,7 @@ import { BarChart3, ReceiptText, ScanLine, Sparkles, Store, Table2 } from "lucid
 import { ReceiptList } from "@/components/receipts/receipt-list";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/store";
-import { useLiveCounter, type CounterStatus } from "@/lib/use-live-counter";
+import { useLiveCounter } from "@/lib/use-live-counter";
 import { cn } from "@/lib/utils";
 import { LedgerPreview, LiveOrders, MyStallCard } from "./live";
 import { Overview } from "./overview";
@@ -26,14 +26,6 @@ const TABS: { id: Tab; label: string; short: string; icon: React.ReactNode }[] =
   { id: "stall", label: "My stall", short: "Stall", icon: <Store /> },
   { id: "penny", label: "Penny", short: "Penny", icon: <Sparkles /> },
 ];
-
-const STATUS_TEXT: Record<CounterStatus, string> = {
-  off: "Scan receipts",
-  connecting: "Connecting",
-  live: "Live",
-  reconnecting: "Reconnecting",
-  "other-tab": "Open in another tab",
-};
 
 export function Studio({ stallId }: { stallId: string }) {
   const stall = useStore((s) => s.stalls.find((x) => x.id === stallId));
@@ -69,7 +61,6 @@ export function Studio({ stallId }: { stallId: string }) {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <LivePill status={counter.status} />
           <Button variant="ghost" size="sm" onClick={() => setShowReceipts((v) => !v)} aria-expanded={showReceipts}>
             <ReceiptText /> <span className="hidden sm:inline">Receipts</span> ({receipts.length})
           </Button>
@@ -153,24 +144,5 @@ function TabButton({ t, active, onClick }: { t: (typeof TABS)[number]; active: b
       {t.icon}
       {t.label}
     </button>
-  );
-}
-
-function LivePill({ status }: { status: CounterStatus }) {
-  const live = status === "live";
-  return (
-    <span
-      role="status"
-      title={live ? "Paid orders appear on their own" : undefined}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold",
-        live ? "border-success/40 text-success-ink" : status === "off" ? "text-muted-foreground" : "border-warning/40 text-warning-ink",
-      )}
-    >
-      <span className={cn("relative size-2 rounded-full", live ? "bg-success" : status === "off" ? "bg-muted-foreground" : "bg-warning")}>
-        {live ? <span className="absolute inset-0 animate-ping rounded-full bg-success/60 motion-reduce:hidden" /> : null}
-      </span>
-      {STATUS_TEXT[status]}
-    </span>
   );
 }

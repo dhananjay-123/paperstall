@@ -1,5 +1,9 @@
 # Changelog
 
+## Icons and studio header (2026-11-03)
+- Favicon redrawn with heavier strokes so it reads at 16px; added `favicon.ico`, an Apple touch icon, and 192/512/maskable PNGs in the manifest.
+- Removed the "Live" status pill from the studio header.
+
 ## Security audit (2026-11-02)
 - Fixed (high): refunds and tracking needed only an order ID. They now need the stall's owner token, and the server checks with PayPal that the order belongs to that stall and the capture to that order.
 - Fixed: invoice remind and cancel need the invoice's owner token, so a share link can't cancel an invoice.
