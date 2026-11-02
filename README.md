@@ -9,7 +9,7 @@ counter only after PayPal confirms it, so fake payment screenshots don't work. P
 office, but anything that moves money waits for your approval.
 
 > **Status:** runs end to end against the PayPal sandbox: stall checkout → receipt → verified sale, invoices with QR,
-> billing plans, refunds. Live demo: _DEPLOY_URL_ · Demo video: coming.
+> billing plans, refunds. Live demo: [paperstall.vercel.app](https://paperstall.vercel.app) · Demo video: coming.
 
 ## Judge quick path
 1. Open the live demo and go to **New** → **Samples** → *Rosa's Coffee Cart* (or *Tacos Doña Maria* for a Spanish menu).

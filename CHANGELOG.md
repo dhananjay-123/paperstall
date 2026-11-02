@@ -6,6 +6,7 @@
 - Fixed: the server assigns stall IDs, so a stall can't be signed under another stall's ID.
 - Fixed: only `https:` URLs from the market check and in item photos.
 - Audit table, accepted risks and known limits in [SECURITY.md](SECURITY.md); design in ADR-013.
+- First deploy: [paperstall.vercel.app](https://paperstall.vercel.app), with a production-only signing secret. The checks above and the security headers were re-verified on the live site.
 
 ## Live counter and design overhaul (2026-11-02)
 - Live counter: paid orders appear in the studio by themselves via an ntfy.sh doorbell, each re-checked with PayPal; pickup codes on receipts and cards; one recording tab per stall; cross-device "already counted".

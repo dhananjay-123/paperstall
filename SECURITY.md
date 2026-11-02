@@ -48,15 +48,17 @@ A review of every API route, the signing and doorbell code, the CSP and the clie
 | Low | `pnpm audit`: one moderate (minimatch) and one low (deepmerge) advisory, both under the `shadcn` CLI and never loaded at runtime. | Accepted |
 | Info | Checked and fine: no secret values or names in `.next/static`, `.env*` untracked, `/dev/health` 404s in production, `MOCK_AI` refused in production, prices always recomputed from the signed stall, receipt QRs and stall links HMAC-verified, CSP nonce-only scripts. | — |
 
-Verified locally against the PayPal sandbox: no token, a forged token, another stall's token, another stall's order and a capture from another order are all refused. Stalls and invoices made before this change have no token, so publish or send them again to refund or cancel from the app.
+Verified locally and again on the deployed site (paperstall.vercel.app) against the PayPal sandbox: no token, a forged token, another stall's token, another stall's order and a capture from another order are all refused. Stalls and invoices made before this change have no token, so publish or send them again to refund or cancel from the app.
 
 ## Known limits
 - **No seller accounts.** Creating an invoice or plan, signing a stall, and the AI routes are open to anyone, limited only by per-IP rate limits that are best-effort on serverless. That's acceptable on the sandbox. A production launch needs seller sign-in (for example Log in with PayPal) and a shared rate-limit store.
 - The owner token lives in the seller's browser storage. Anyone with access to that device, or an export file, can act as the seller.
 - The sandbox buyer login on the landing page is a public test account by design (`NEXT_PUBLIC_*`, sandbox only).
 
+Deployed headers checked on paperstall.vercel.app: nonce CSP, HSTS with preload, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy` and `Permissions-Policy` all present, no `X-Powered-By`, and `/dev/health` returns 404. Production uses its own signing secret, separate from development.
+
 ## Not yet done
-An external header scan on the deployed URL, and webhook signature verification (no webhooks are used).
+A third-party header scan (for example securityheaders.com), and webhook signature verification (no webhooks are used).
 
 ## Reporting
 Please open a GitHub issue without sensitive details and ask for a private contact.
