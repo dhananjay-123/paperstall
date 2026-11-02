@@ -202,6 +202,19 @@ function ReadEditor({ draft, onContinue }: { draft: DraftRead; onContinue: (inte
 
   const update = (next: Partial<Read>) => patchDraft({ read: { ...read, ...next }, edits: draft.edits + 1 });
   const setItem = (id: string, p: Partial<ReadItem>) => update({ items: read.items.map((i) => (i.id === id ? { ...i, ...p } : i)) });
+  // The last removed item, so a mis-tap can be undone in place.
+  const [removed, setRemoved] = useState<{ item: ReadItem; index: number } | null>(null);
+  const removeItem = (index: number) => {
+    setRemoved({ item: read.items[index], index });
+    update({ items: read.items.filter((_, i) => i !== index) });
+  };
+  const undoRemove = () => {
+    if (!removed) return;
+    const items = [...read.items];
+    items.splice(Math.min(removed.index, items.length), 0, removed.item);
+    update({ items });
+    setRemoved(null);
+  };
 
   // Market check for branded items, cached 24h per query. Never blocks anything.
   const marketQueries = useMemo(
@@ -382,7 +395,7 @@ function ReadEditor({ draft, onContinue }: { draft: DraftRead; onContinue: (inte
                       />
                     </label>
                   ) : null}
-                  <Button variant="ghost" size="icon-sm" aria-label={`Remove ${it.nameEn}`} onClick={() => update({ items: read.items.filter((x) => x.id !== it.id) })}>
+                  <Button variant="ghost" size="icon-sm" aria-label={`Remove ${it.nameEn}`} onClick={() => removeItem(i)}>
                     <Trash2 />
                   </Button>
                 </div>
@@ -427,6 +440,14 @@ function ReadEditor({ draft, onContinue }: { draft: DraftRead; onContinue: (inte
             );
           })}
         </ul>
+        {removed && !read.items.some((x) => x.id === removed.item.id) ? (
+          <div role="status" className="flex items-center gap-2 rounded-lg border bg-muted px-3 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">Removed “{removed.item.nameEn}”</span>
+            <Button variant="outline" size="sm" onClick={undoRemove}>
+              <RotateCcw /> Undo
+            </Button>
+          </div>
+        ) : null}
         <Button
           variant="outline"
           size="sm"
