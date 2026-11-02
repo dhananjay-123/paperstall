@@ -7,10 +7,17 @@ gives you a real way to get paid with PayPal: a storefront with PayPal Checkout,
 PayPal subscription plan. Every sale is verified with PayPal before it's recorded, and Penny, an AI clerk, helps run the
 back office, but anything that moves money waits for your approval.
 
-> **Status:** the app works end to end; it hasn't been deployed or run against the PayPal sandbox yet. Live URL, demo video and judge login are coming.
+> **Status:** runs end to end against the PayPal sandbox: stall checkout → receipt → verified sale, invoices with QR,
+> billing plans, refunds. Live demo: _DEPLOY_URL_ · Demo video: coming.
 
 ## Judge quick path
-_Added with the hosted demo: sandbox buyer login + 4 steps (also shown on the landing page)._
+1. Open the live demo and go to **New** → **Samples** → *Rosa's Coffee Cart* (or *Tacos Doña Maria* for a Spanish menu).
+2. Check the Read, keep **Shop**, then **Continue** → **Publish**, and open the storefront link.
+3. Add a few items and pay with PayPal using the sandbox buyer login shown on the landing page.
+4. Open **Verify**, scan the receipt QR (or type the order ID): it's confirmed with PayPal and lands in the ledger.
+   Scan it again and it says "Already recorded".
+
+Also try *Sam Lee Design* (invoice + QR), *Piano Lessons* (subscription plan), and **Studio → Penny** ("refund the last order").
 
 ## Who it's for
 Small sellers anywhere who run on paper (market stalls, food trucks, craft fairs, tutors, small workshops) and skip
@@ -36,7 +43,8 @@ is in [docs/PAYPAL-INTEGRATION.md](docs/PAYPAL-INTEGRATION.md).
 ## AI usage
 - **Gemini** (`gemini-3-flash-preview` for reading, `gemini-3.5-flash-lite` for chat), chosen by `pnpm probe:gemini`.
 - Structured output with a zod schema and 0–1000 bounding boxes; one repair attempt.
-- Code-side checks: math check, sanity checks, acceptable-use classification.
+- Code-side checks: math check (lines + written tax vs. the written total), sanity checks, acceptable-use classification.
+- Tax on the paper is read separately and charged as a rate on every cart (PayPal `tax_total`).
 - **Penny** uses Gemini function calling over PayPal tools; refunds, reminders, cancellations, invoices and shipping only become Approval Cards.
 - A buyer concierge proposes carts from the stall's own items only.
 

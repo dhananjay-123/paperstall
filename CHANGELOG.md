@@ -1,5 +1,12 @@
 # Changelog
 
+## Live sandbox run, tax and samples (2026-11-02)
+- Full sandbox flow verified: stall checkout with the buyer account → receipt → Scan to confirm → ledger; invoice send + QR; plan + subscription create; partial refund.
+- Tax: the Read picks up tax amounts and stated rates; stalls charge tax as a rate (PayPal `tax_total`), verify includes it, invoices add it as a line. Menus show a sales-tax rate instead of a meaningless "total".
+- Five built-in samples (coffee cart, freelancer bill, piano lessons, phone accessories, Spanish taco stand) with cached Reads.
+- Undo for a removed item; lighter ink circles; the verify page says what happens next.
+- Fixed: the receipt page looped after a reload.
+
 ## Sandbox verification + market check fix (2026-11-02)
 - PayPal sandbox verified live via `/dev/health`: OAuth, order create, buyer approval, capture, draft invoice create + delete. Findings in `docs/PAYPAL-INTEGRATION.md`.
 - Channel3 verified live. The market check now pools single-store listings of the same product, so price chips show for most branded items (7 of 8 test products, up from 1); near-miss models stay out.

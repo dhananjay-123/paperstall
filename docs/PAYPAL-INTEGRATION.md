@@ -53,5 +53,12 @@ matched ours); `POST /plans` (catalog product + `ACTIVE` plan); `POST /subscript
 `POST /verify` on an unpaid order (rejected as `not_paid`); and a partial refund through `POST /orders/{id}`
 (`COMPLETED`). Channel3 returned a match for "AirPods Max 2".
 
-Not yet run live: buyer approval on the storefront button → capture → receipt QR → `/verify` recording a paid order,
-and buyer approval of a subscription. Both need a browser login as the sandbox buyer.
+In the browser (same day): a published stall → sandbox buyer approves on the storefront button → capture → receipt QR
+→ `/verify` records the paid order in the ledger (US$11.75, three items).
+
+Tax: a stall carries the paper's tax as a basis-point rate. Orders send it as `breakdown.tax_total`, so PayPal shows it
+as tax and `amount.value = item_total + tax_total`; `verifyOrder` recomputes the same total. Verified live: a $21.21
+receipt with $1.49 tax created a $22.70 order. Invoices carry the paper's tax amount as its own line, so PayPal's total
+matches the paper exactly.
+
+Not yet run live: buyer approval of a subscription.

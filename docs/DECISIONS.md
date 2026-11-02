@@ -17,18 +17,13 @@ Short ADRs: context → decision → consequences.
 **Decision:** A sale enters the seller's ledger only after the server confirms the order with PayPal through Scan to confirm (status, capture status, payee, amount, currency, replay). Part of Phase 3, not a later add-on.
 **Consequences:** The seller scans the buyer's receipt QR (or types an order ID). Checkouts in the seller's own browser write directly after capture.
 
-## ADR-004 — Repo root is `paperstall/`
-**Context:** The hackathon prompt pack sits next to the code.
-**Decision:** The git repo is the `paperstall/` folder; prompt files stay outside it.
-**Consequences:** The public repo contains only the product.
-
 ## ADR-005 — Nonce CSP in `src/proxy.ts`, every page dynamic
 **Context:** A strict script CSP needs a per-request nonce. Next.js 16 renamed middleware to `proxy`; its docs state nonces need dynamic rendering and are incompatible with partial prerendering.
 **Decision:** Generate the nonce and set all security headers in `src/proxy.ts`; turn off `cacheComponents`; the root layout reads `headers()` (making pages dynamic) and nonces the theme script. `style-src` allows `'unsafe-inline'` because server-rendered `style` attributes can't carry a nonce.
 **Consequences:** No static/CDN caching of pages. Scripts stay nonce-only.
 
-## ADR-006 — Channel3 for the market check (the one sponsor prize)
-**Context:** Small sellers often misprice branded goods, and a project can win only one sponsor prize.
+## ADR-006 — Channel3 for the market check
+**Context:** Small sellers often misprice branded goods.
 **Decision:** Use Channel3 product search for branded items the Read flags; show a price range, suggested price, typo-style price guard and optional product photo. Key is server-only; the feature hides itself when the key is missing or a call fails.
 **Consequences:** Pricing help with real data and no blocking dependency. Matches below a confidence threshold are never shown.
 
