@@ -47,5 +47,11 @@ Findings:
   `client_credentials`, so a feature enabled after that token was issued doesn't apply. End it with
   `POST /v1/oauth2/token/terminate`, then restart the server so our in-memory token cache is dropped too.
 
-Not yet run live: invoice send and QR, catalog product + billing plan + subscribe, refund, and the full storefront
-checkout → receipt → `/verify` flow.
+Through the app's own API routes (same day): a signed USD stall → `POST /orders` with server-side pricing
+(`CREATED`, payee and `custom_id` correct on `GET /orders/{id}`); `POST /invoices` (draft → send → QR, PayPal total
+matched ours); `POST /plans` (catalog product + `ACTIVE` plan); `POST /subscriptions` (`APPROVAL_PENDING`);
+`POST /verify` on an unpaid order (rejected as `not_paid`); and a partial refund through `POST /orders/{id}`
+(`COMPLETED`). Channel3 returned a match for "AirPods Max 2".
+
+Not yet run live: buyer approval on the storefront button → capture → receipt QR → `/verify` recording a paid order,
+and buyer approval of a subscription. Both need a browser login as the sandbox buyer.
