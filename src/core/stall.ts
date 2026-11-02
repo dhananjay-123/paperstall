@@ -29,6 +29,7 @@ export const StallPayload = z.object({
   t: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(), // ink colour
   l: z.string().max(12).optional(), // source language
   r: z.number().int().min(0).max(5000).optional(), // tax rate in basis points (702 = 7.02%), from the paper
+  nt: z.string().max(100).optional(), // doorbell topic, sealed by the server (see server/doorbell.ts)
   x: z.number().int().positive(), // expiry, unix seconds
 });
 export type StallPayload = z.infer<typeof StallPayload>;
@@ -42,6 +43,8 @@ export type Stall = {
   intent: "shop" | "invoice" | "subscription";
   sourceImage?: string; // small thumbnail of the paper
   metrics?: { photoToPublishMs?: number; editsPerItem?: number };
+  /** The live-counter topic in clear. Only on the seller's device, never in the link. */
+  doorbell?: string;
 };
 
 export type CartLine = { id: string; qty: number };

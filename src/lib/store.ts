@@ -23,7 +23,11 @@ export type LedgerEntry = {
   captureId?: string;
   refundedMinor?: number;
   tracking?: { number: string; carrier: string };
-  verifiedVia: "scan" | "manual" | "counter" | "invoice-status" | "penny";
+  verifiedVia: "scan" | "manual" | "counter" | "doorbell" | "invoice-status" | "penny";
+  pickupCode?: string;
+  payer?: string;
+  /** Set on the live counter when the order is given to the customer. */
+  handedAt?: string;
 };
 
 export type InvoiceRecord = {

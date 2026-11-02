@@ -46,7 +46,15 @@ export function Overview({ stall }: { stall: Stall }) {
           </ul>
         ) : (
           <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
-            No sales yet. When a buyer pays, tap <Link className="text-action underline" href={`/verify?stall=${stall.id}`}>Scan to confirm payment</Link> and scan their receipt.
+            No sales yet. Keep the{" "}
+            <Link className="text-action underline" href={`/counter?stall=${stall.id}`}>
+              live counter
+            </Link>{" "}
+            open and paid orders appear by themselves, or{" "}
+            <Link className="text-action underline" href={`/verify?stall=${stall.id}`}>
+              scan a receipt
+            </Link>
+            .
           </p>
         )}
       </section>

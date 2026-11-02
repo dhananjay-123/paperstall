@@ -16,12 +16,12 @@ const DrawPad = dynamic(() => import("@/components/capture/draw-pad").then((m) =
   loading: () => <div className="aspect-[4/3] w-full rounded-xl ink-shimmer" />,
 });
 
-type Mode = "photo" | "draw" | "samples";
+export type Mode = "photo" | "draw" | "samples";
 
-export function CaptureClient({ availableSamples }: { availableSamples: string[] }) {
+export function CaptureClient({ availableSamples, initialMode = "photo" }: { availableSamples: string[]; initialMode?: Mode }) {
   const router = useRouter();
   const setDraft = useStore((s) => s.setDraft);
-  const [mode, setMode] = useState<Mode>("photo");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const samples: Sample[] = SAMPLES.filter((s) => availableSamples.includes(s.id));

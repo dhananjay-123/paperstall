@@ -1,4 +1,4 @@
-import type { NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
 import { z } from "zod";
 import { ReceiptBook } from "@/core/receipts";
 import { signReceipt } from "@/core/signing";
@@ -6,6 +6,7 @@ import { verifyOrder } from "@/core/verify";
 import { assertSameOrigin, fail, HttpError, ok, parseJson, rateLimit } from "@/server/http";
 import { captureOrder, getOrder } from "@/server/paypal/ops";
 import { PayPalError } from "@/server/paypal/client";
+import { openTopic, pickupCode, ring } from "@/server/doorbell";
 import { signingSecret, trustedStall } from "@/server/stall";
 
 const Body = z.object({ signed: z.string().max(8000), orderId: z.string().regex(/^[A-Z0-9]{5,40}$/) });
@@ -30,7 +31,13 @@ export async function POST(req: NextRequest) {
     // Same checks the seller's scanner runs, so the buyer sees the truth too.
     const verdict = verifyOrder(order, stall);
     if (!verdict.ok) throw new HttpError(409, `ORDER_${verdict.reason.toUpperCase()}`, `${verdict.message}. Order ${order.id}.`);
-    return ok({ ...verdict, stallId: stall.id, stallName: stall.n, receiptCode: signReceipt(order.id, stall.id, signingSecret()) }, book.items);
+    // Ring the seller's counter after responding. It re-checks with PayPal itself.
+    const topic = stall.nt ? openTopic(stall.nt, signingSecret()) : null;
+    if (topic) after(() => ring(topic, { t: "paid", o: order.id }));
+    return ok(
+      { ...verdict, stallId: stall.id, stallName: stall.n, receiptCode: signReceipt(order.id, stall.id, signingSecret()), pickupCode: pickupCode(order.id, signingSecret()) },
+      book.items,
+    );
   } catch (err) {
     return fail(err, book.items);
   }

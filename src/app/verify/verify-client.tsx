@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { PaidReceipt } from "@/components/paid/paid-receipt";
+import { EmptyBoard } from "@/components/empty-board";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/core/money";
 import type { Verdict } from "@/core/verify";
-import { api, ApiCallError } from "@/lib/api-client";
+import { ApiCallError } from "@/lib/api-client";
+import { announceCounted, checkOrder, countedElsewhere } from "@/lib/doorbell-client";
 import { kaching } from "@/lib/sound";
 import { useStore } from "@/lib/store";
 
@@ -38,32 +40,22 @@ export function VerifyClient({ initialStall }: { initialStall?: string }) {
 
   if (!stalls.length) {
     return (
-      <div className="mx-auto max-w-md space-y-4 px-4 py-16 text-center">
-        <h1 className="font-serif text-3xl text-ink">No stall on this device</h1>
-        <p className="text-muted-foreground">Scan to confirm works on the phone where you published your stall.</p>
-        <Button variant="action" asChild>
-          <Link href="/new">Make a stall</Link>
-        </Button>
-      </div>
+      <EmptyBoard
+        title="No stall on this phone yet"
+        body="Payments are checked on the phone that published the stall, because only the seller can count a sale. Make a stall here first."
+        action="Make a stall"
+        href="/new"
+      />
     );
   }
 
   async function check(input: { code?: string; orderId?: string }) {
     if (!stall || busy) return;
     setBusy(true);
-    const mine = ledger.filter((l) => l.stallId === stall.id);
     try {
-      const { verdict } = await api<{ verdict: Verdict }>("/api/v1/verify", {
-        body: {
-          ...input,
-          signed: stall.signed,
-          recorded: {
-            orderIds: mine.map((l) => l.id),
-            captureIds: mine.flatMap((l) => (l.captureId ? [l.captureId] : [])),
-            recordedAt: Object.fromEntries(mine.map((l) => [l.id, l.at])),
-          },
-        },
-      });
+      // Orders the live counter (or another phone) already counted must not count twice.
+      const elsewhere = stall.doorbell ? await countedElsewhere(stall.doorbell) : undefined;
+      const { verdict, pickupCode, payer } = await checkOrder(stall, ledger, input, elsewhere);
       if (verdict.ok) {
         const wrote = addLedger({
           id: verdict.orderId,
@@ -76,7 +68,10 @@ export function VerifyClient({ initialStall }: { initialStall?: string }) {
           status: "COMPLETED",
           captureId: verdict.captureId,
           verifiedVia: input.code ? "scan" : "manual",
+          pickupCode,
+          payer,
         });
+        if (wrote && stall.doorbell) announceCounted(stall.doorbell, verdict.orderId);
         if (!wrote) {
           setResult({ verdict: { ok: false, reason: "already_recorded", message: "Already recorded" }, at: stamp() });
         } else {
@@ -119,6 +114,15 @@ export function VerifyClient({ initialStall }: { initialStall?: string }) {
         </label>
         {stall ? <span className="ml-auto font-medium tabular-nums">Today: {formatMoney(takings, stall.payload.c)}</span> : null}
       </div>
+      {stall?.doorbell ? (
+        <p className="rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
+          Selling from a laptop or tablet?{" "}
+          <Link href={`/counter?stall=${stall.id}`} className="font-medium text-action underline underline-offset-2">
+            Open the live counter
+          </Link>{" "}
+          and paid orders appear on their own, no scanning.
+        </p>
+      ) : null}
 
       {result ? <ResultCard result={result} title={stall?.payload.n ?? "Paid"} stallId={stall?.id} /> : null}
 
@@ -134,8 +138,11 @@ export function VerifyClient({ initialStall }: { initialStall?: string }) {
         className="flex gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          const id = manual.trim().toUpperCase();
-          if (id) void check({ orderId: id });
+          // Order IDs may be typed in groups ("6VU2 9750 …"). Anything longer is a receipt code from a handheld QR scanner.
+          const raw = manual.trim();
+          const id = raw.replace(/[\s-]/g, "").toUpperCase();
+          if (/^[A-Z0-9]{5,40}$/.test(id)) void check({ orderId: id });
+          else if (raw) void check({ code: raw });
         }}
       >
         <label className="sr-only" htmlFor="order-id">
@@ -145,14 +152,17 @@ export function VerifyClient({ initialStall }: { initialStall?: string }) {
           id="order-id"
           value={manual}
           onChange={(e) => setManual(e.target.value)}
-          placeholder="…or type a PayPal order ID"
-          pattern="[A-Za-z0-9]{5,40}"
+          placeholder="…or type the order ID from their receipt"
           className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 font-mono text-sm"
         />
         <Button type="submit" variant="outline" disabled={busy || !manual.trim()}>
           {busy ? <Loader2 className="animate-spin" /> : null} Check
         </Button>
       </form>
+      <p className="text-sm text-muted-foreground">
+        Selling from a laptop? The customer can hold their phone up to your webcam, or read out the order ID printed under their QR code. A USB QR scanner
+        works too: click the box above and scan.
+      </p>
     </div>
   );
 }

@@ -1,17 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { Caveat, Instrument_Serif, Inter } from "next/font/google";
+import { Caveat, Schibsted_Grotesk } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
 import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-instrument-serif",
-  weight: "400",
-  style: ["normal", "italic"],
-  subsets: ["latin"],
-});
+const schibsted = Schibsted_Grotesk({ variable: "--font-schibsted", subsets: ["latin"] });
 const caveat = Caveat({ variable: "--font-caveat", subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -22,7 +16,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f4ec" },
+    { media: "(prefers-color-scheme: light)", color: "#f1f1ec" },
     { media: "(prefers-color-scheme: dark)", color: "#0b1530" },
   ],
 };
@@ -35,7 +29,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${instrumentSerif.variable} ${caveat.variable} h-full`}
+      className={`${schibsted.variable} ${caveat.variable} h-full`}
     >
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeInitScript }} />

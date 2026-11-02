@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Minus, Plus, ShieldAlert, ShoppingBag } from "lucide-react";
+import { Minus, Plus, ShieldAlert, ShieldCheck, ShoppingBag } from "lucide-react";
 import { PayPalButton } from "@/components/paypal/paypal-button";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/core/money";
@@ -12,6 +12,7 @@ import { api, ApiCallError } from "@/lib/api-client";
 import { itemArtKey, useStore } from "@/lib/store";
 import { saveBuyerReceipt } from "@/lib/buyer-receipts";
 import { kaching } from "@/lib/sound";
+import { cn } from "@/lib/utils";
 import { Concierge } from "./concierge";
 
 function subscribeHash(cb: () => void) {
@@ -49,19 +50,12 @@ function Empty({ title, body }: { title: string; body: string }) {
   );
 }
 
-function ItemArt({ stallId, item, ink }: { stallId: string; item: StallItem; ink: string }) {
+function ItemThumb({ stallId, item }: { stallId: string; item: StallItem }) {
   const local = useStore((s) => s.art[itemArtKey(stallId, item)]);
   const src = item.img ?? local;
-  if (src) {
-    // eslint-disable-next-line @next/next/no-img-element -- seller's own crop (data URL) or a market photo
-    return <img src={src} alt={item.name} className="h-24 w-full rounded-lg bg-white object-contain" />;
-  }
-  // Buyers on other devices don't have the crop: show the name as an ink label, never a broken image.
-  return (
-    <div className="flex h-24 w-full items-center justify-center rounded-lg bg-white px-3 text-center font-hand text-3xl leading-none" style={{ color: ink }} aria-hidden>
-      {item.orig ?? item.name}
-    </div>
-  );
+  if (!src) return null;
+  // eslint-disable-next-line @next/next/no-img-element -- seller's own crop (data URL) or a market photo
+  return <img src={src} alt="" className="size-14 shrink-0 rounded-lg border bg-white object-contain" />;
 }
 
 function Shop({ stall, signed, check }: { stall: StallPayload; signed: string; check: { ok: boolean; reason?: string } | null }) {
@@ -95,6 +89,7 @@ function Shop({ stall, signed, check }: { stall: StallPayload; signed: string; c
         paidAt?: string;
         stallName: string;
         receiptCode: string;
+        pickupCode?: string;
       }>("/api/v1/orders/capture", { body: { signed, orderId } });
       saveBuyerReceipt({ ...res, stallId: stall.id, at: res.paidAt ?? new Date().toISOString() });
       // Counter mode: when checkout happens on the seller's own device, PayPal already confirmed it.
@@ -121,15 +116,22 @@ function Shop({ stall, signed, check }: { stall: StallPayload; signed: string; c
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 pt-8 pb-40">
-      <header className="mb-6 space-y-1">
-        <p className="font-hand text-2xl" style={{ color: ink }}>
+    <div className="mx-auto w-full max-w-5xl px-4 pt-8 pb-40" style={{ "--stall-ink": ink } as React.CSSProperties}>
+      <header className="mb-8 space-y-2">
+        <p className="font-hand text-2xl text-(--stall-ink) dark:text-sky">
           {stall.k ?? "welcome"}
         </p>
-        <h1 className="font-serif text-5xl leading-tight" style={{ color: ink }}>
+        <h1 className="text-5xl leading-[1] font-extrabold tracking-[-0.04em] text-(--stall-ink) sm:text-6xl dark:text-foreground">
           {stall.n}
         </h1>
-        <p className="text-sm text-muted-foreground">Prices in {stall.c}. Pay securely with PayPal.</p>
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <span>Prices in {stall.c}. Pay with PayPal.</span>
+          {check?.ok ? (
+            <span className="inline-flex items-center gap-1 font-medium text-success-ink">
+              <ShieldCheck className="size-4" /> Prices sealed by the seller
+            </span>
+          ) : null}
+        </p>
       </header>
 
       {blocked ? (
@@ -150,41 +152,42 @@ function Shop({ stall, signed, check }: { stall: StallPayload; signed: string; c
         setNotes(n);
       }} />
 
-      <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <ul className="mt-6 grid gap-x-10 rounded-2xl border bg-card px-4 py-2 sm:px-6 md:grid-cols-2">
         {stall.i.map((it) => {
           const qty = cart[it.id] ?? 0;
           return (
-            <li key={it.id} className="flex flex-col gap-2 rounded-xl border bg-card p-3">
-              <ItemArt stallId={stall.id} item={it} ink={ink} />
+            <li key={it.id} className={cn("flex items-center gap-3 border-b border-dashed py-4 transition-colors last:border-b-0 md:[&:nth-last-child(2):nth-child(odd)]:border-b-0")}>
+              <ItemThumb stallId={stall.id} item={it} />
               <div className="min-w-0 flex-1">
-                <p className="font-medium leading-tight">{it.name}</p>
-                {it.orig ? <p className="font-hand text-lg leading-none text-muted-foreground">{it.orig}</p> : null}
-                {it.desc ? <p className="mt-1 text-xs text-muted-foreground">{it.desc}</p> : null}
+                <p className="flex items-baseline gap-2">
+                  <span className="font-semibold leading-tight">{it.name}</span>
+                  <span aria-hidden className="mb-1 min-w-4 flex-1 border-b-2 border-dotted border-border" />
+                  <span className="font-semibold tabular-nums">
+                    {formatMoney(it.price, stall.c)}
+                    {it.unit ? <span className="text-xs font-normal text-muted-foreground"> {it.unit}</span> : null}
+                  </span>
+                </p>
+                {it.orig ? <p className="font-hand text-lg leading-tight text-(--stall-ink) dark:text-sky">{it.orig}</p> : null}
+                {it.desc ? <p className="mt-0.5 text-xs text-muted-foreground">{it.desc}</p> : null}
                 {notes[it.id] ? <p className="mt-1 text-xs text-action">Note: {notes[it.id]}</p> : null}
               </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-medium tabular-nums">
-                  {formatMoney(it.price, stall.c)}
-                  {it.unit ? <span className="text-xs text-muted-foreground"> {it.unit}</span> : null}
-                </span>
-                {qty ? (
-                  <span className="flex items-center gap-1">
-                    <Button size="icon-sm" variant="outline" aria-label={`One less ${it.name}`} onClick={() => set(it.id, qty - 1)}>
-                      <Minus />
-                    </Button>
-                    <span className="w-5 text-center tabular-nums" aria-live="polite">
-                      {qty}
-                    </span>
-                    <Button size="icon-sm" variant="outline" aria-label={`One more ${it.name}`} onClick={() => set(it.id, qty + 1)}>
-                      <Plus />
-                    </Button>
-                  </span>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={() => set(it.id, 1)} aria-label={`Add ${it.name}`}>
-                    <Plus /> Add
+              {qty ? (
+                <span className="flex shrink-0 items-center gap-1">
+                  <Button size="icon-sm" variant="outline" className="rounded-full" aria-label={`One less ${it.name}`} onClick={() => set(it.id, qty - 1)}>
+                    <Minus />
                   </Button>
-                )}
-              </div>
+                  <span className="w-5 text-center font-semibold tabular-nums" aria-live="polite">
+                    {qty}
+                  </span>
+                  <Button size="icon-sm" variant="outline" className="rounded-full" aria-label={`One more ${it.name}`} onClick={() => set(it.id, qty + 1)}>
+                    <Plus />
+                  </Button>
+                </span>
+              ) : (
+                <Button size="icon-sm" variant="outline" className="shrink-0 rounded-full" onClick={() => set(it.id, 1)} aria-label={`Add ${it.name}`}>
+                  <Plus />
+                </Button>
+              )}
             </li>
           );
         })}
@@ -196,7 +199,7 @@ function Shop({ stall, signed, check }: { stall: StallPayload; signed: string; c
             <ShoppingBag className="size-5 text-ink" />
             <span className="text-sm text-muted-foreground">{count ? `${count} item${count > 1 ? "s" : ""}` : "Your cart is empty"}</span>
             <span className="ml-auto text-right sm:ml-3">
-              <span className="block font-serif text-2xl tabular-nums">{formatMoney(total, stall.c)}</span>
+              <span className="block text-2xl font-bold tracking-tight tabular-nums">{formatMoney(total, stall.c)}</span>
               {tax > 0 ? <span className="block text-xs text-muted-foreground tabular-nums">incl. {formatMoney(tax, stall.c)} tax</span> : null}
             </span>
           </div>

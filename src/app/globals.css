@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
-  --font-heading: var(--font-instrument-serif);
-  --font-serif: var(--font-instrument-serif);
+  --font-sans: var(--font-schibsted);
+  --font-heading: var(--font-schibsted);
+  --font-serif: var(--font-schibsted);
   --font-hand: var(--font-caveat);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
@@ -19,6 +19,8 @@
   --color-action: var(--action);
   --color-action-foreground: var(--action-foreground);
   --color-sky: var(--sky);
+  --color-slate: var(--slate);
+  --color-chalk: var(--chalk);
   --color-graphite: var(--graphite);
   --color-success: var(--success);
   --color-success-ink: var(--success-ink);
@@ -58,7 +60,10 @@
 /* Paper (light). Spec colours are used for fills; the *-ink variants are darker
    text versions because #0A8F5C and #C77700 miss WCAG AA as small text on white. */
 :root {
-  --paper: #f7f4ec;
+  --paper: #f1f1ec;
+  --slate: #1f2b26;
+  --chalk: #e8c468;
+  --highlight: #003087;
   --ink: #003087;
   --action: #0070e0;
   --action-foreground: #ffffff;
@@ -79,15 +84,15 @@
   --popover-foreground: var(--graphite);
   --primary: var(--ink);
   --primary-foreground: #ffffff;
-  --secondary: #ece7da;
+  --secondary: #e6e6df;
   --secondary-foreground: var(--ink);
-  --muted: #efebe1;
+  --muted: #e9e9e3;
   --muted-foreground: #5b5a60;
   --accent: #e6eefb;
   --accent-foreground: var(--ink);
   --destructive: var(--danger);
-  --border: #e2dccd;
-  --input: #d8d1bf;
+  --border: #dcdcd3;
+  --input: #cfcfc4;
   --ring: var(--action);
   --chart-1: #003087;
   --chart-2: #0070e0;
@@ -100,9 +105,13 @@
 /* Blueprint (dark): deep navy paper, paper-white ink. */
 .dark {
   --paper: #0b1530;
+  --slate: #16211d;
+  --chalk: #e8c468;
+  --highlight: #e8c468;
   --ink: #f7f4ec;
-  --action: #0070e0;
-  --action-foreground: #ffffff;
+  /* Chalk yellow carries primary actions on the dark board, as in the dashboard design. */
+  --action: #e8c468;
+  --action-foreground: #0b1530;
   --sky: #4cc3f0;
   --graphite: #f7f4ec;
   --success: #2fbf86;
@@ -151,6 +160,11 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+  /* Headings are set in the same grotesk as the body, heavier and tighter. */
+  .font-serif {
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
@@ -197,5 +211,15 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Landing walkthrough progress bar. */
+@keyframes ps-fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
   }
 }

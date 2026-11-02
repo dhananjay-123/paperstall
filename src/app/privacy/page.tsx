@@ -23,6 +23,13 @@ export default function PrivacyPage() {
         <p>Only the brand and model of branded items (for example “JBL Go 3”), to look up market prices. Nothing about you or your buyers.</p>
       </section>
       <section className="space-y-2">
+        <h2 className="font-serif text-2xl text-ink">What goes to ntfy.sh (live counter)</h2>
+        <p>
+          When a buyer pays, the PayPal order ID (and nothing else) is posted to a private ntfy.sh channel that only your device knows, so your live counter
+          can show the order. No names, items or amounts. Your counter still checks every order with PayPal before counting it.
+        </p>
+      </section>
+      <section className="space-y-2">
         <h2 className="font-serif text-2xl text-ink">What we don&apos;t do</h2>
         <p>No analytics or ad trackers. Our server doesn&apos;t log your photos, buyer emails or other personal data.</p>
       </section>

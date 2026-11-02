@@ -7,6 +7,8 @@ import { useEffect, useRef, useState } from "react";
 export function Scanner({ onCode, paused }: { onCode: (code: string) => void; paused?: boolean }) {
   const video = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
+  // Laptop webcams face the person: mirror the preview so holding a phone up feels natural.
+  const [selfie, setSelfie] = useState(false);
   const last = useRef<{ code: string; at: number } | null>(null);
   const cb = useRef(onCode);
   const pausedRef = useRef(paused);
@@ -62,6 +64,8 @@ export function Scanner({ onCode, paused }: { onCode: (code: string) => void; pa
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
         if (stopped) return stream.getTracks().forEach((t) => t.stop());
+        const facing = stream.getVideoTracks()[0]?.getSettings().facingMode;
+        setSelfie(facing !== "environment");
         if (video.current) {
           video.current.srcObject = stream;
           await video.current.play();
@@ -81,8 +85,11 @@ export function Scanner({ onCode, paused }: { onCode: (code: string) => void; pa
   if (error) return <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">{error}</p>;
   return (
     <div className="relative overflow-hidden rounded-2xl border bg-black">
-      <video ref={video} playsInline muted className="aspect-square w-full object-cover" aria-label="Camera view for scanning receipt QR codes" />
+      <video ref={video} playsInline muted className={`aspect-square w-full object-cover ${selfie ? "-scale-x-100" : ""}`} aria-label="Camera view for scanning receipt QR codes" />
       <div className="pointer-events-none absolute inset-[18%] rounded-2xl border-4 border-white/80" aria-hidden />
+      {selfie ? (
+        <p className="pointer-events-none absolute inset-x-0 bottom-3 text-center text-sm font-medium text-white drop-shadow">Ask the customer to hold their receipt up to the camera</p>
+      ) : null}
     </div>
   );
 }

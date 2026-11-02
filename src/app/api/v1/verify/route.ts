@@ -6,6 +6,7 @@ import { verifyOrder } from "@/core/verify";
 import { assertSameOrigin, fail, HttpError, ok, parseJson, rateLimit } from "@/server/http";
 import { getOrder } from "@/server/paypal/ops";
 import { PayPalError } from "@/server/paypal/client";
+import { pickupCode } from "@/server/doorbell";
 import { signingSecret, trustedStall } from "@/server/stall";
 
 const Ids = z.array(z.string().max(40)).max(5000);
@@ -45,7 +46,10 @@ export async function POST(req: NextRequest) {
       }
       throw e;
     }
-    return ok({ verdict: verifyOrder(order, stall, body.recorded) }, book.items);
+    const verdict = verifyOrder(order, stall, body.recorded);
+    // The pickup code and the payer's first name help the seller hand the order to the right person.
+    const extra = verdict.ok ? { pickupCode: pickupCode(order.id, signingSecret()), payer: order.payer?.name?.given_name?.slice(0, 40) } : {};
+    return ok({ verdict, ...extra }, book.items);
   } catch (err) {
     return fail(err, book.items);
   }

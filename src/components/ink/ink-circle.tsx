@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 
 /** Gemini-style normalized box: [ymin, xmin, ymax, xmax], each 0–1000. */
 export type Box = readonly [number, number, number, number];
@@ -63,10 +64,13 @@ type InkCircleProps = {
   color?: string;
   /** Replays the draw animation when this changes. */
   playKey?: number;
+  /** Multiply blending reads as ink on light paper; turn it off on dark surfaces like a chalkboard. */
+  blend?: boolean;
+  strokeWidth?: number;
 };
 
 /** An ink stroke that draws itself around a 0–1000 normalized box. Place inside a `relative` parent. */
-export function InkCircle({ box, seed = 1, delay = 0, color = "var(--action)", playKey = 0 }: InkCircleProps) {
+export function InkCircle({ box, seed = 1, delay = 0, color = "var(--action)", playKey = 0, blend = true, strokeWidth = 1.75 }: InkCircleProps) {
   const reduce = useReducedMotion();
   const ref = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
@@ -85,14 +89,14 @@ export function InkCircle({ box, seed = 1, delay = 0, color = "var(--action)", p
   const path = useMemo(() => (size ? inkCirclePath(box, seed, size.w, size.h) : null), [box, seed, size]);
 
   return (
-    <svg ref={ref} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full overflow-visible mix-blend-multiply dark:mix-blend-normal">
+    <svg ref={ref} aria-hidden className={cn("pointer-events-none absolute inset-0 h-full w-full overflow-visible", blend && "mix-blend-multiply dark:mix-blend-normal")}>
       {path ? (
         <motion.path
           key={playKey}
           d={path.d}
           fill="none"
           stroke={color}
-          strokeWidth={1.75}
+          strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeDasharray={path.length}

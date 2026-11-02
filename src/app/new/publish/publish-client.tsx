@@ -81,7 +81,7 @@ function ShopPublish({ defaultPayee }: { defaultPayee: string }) {
         l: read.sourceLanguage.slice(0, 12),
         ...(taxRateBp(read, currency) > 0 ? { r: taxRateBp(read, currency) } : {}),
       };
-      const { signed } = await api<{ signed: string }>("/api/v1/stalls/sign", { body: { payload } });
+      const { signed, doorbell } = await api<{ signed: string; doorbell?: string }>("/api/v1/stalls/sign", { body: { payload } });
       // The seller's own handwriting becomes each item's art (kept on this device).
       for (const it of items as ((typeof items)[number] & { _readId: string })[]) {
         const src = read.items.find((r) => r.id === it._readId);
@@ -99,6 +99,7 @@ function ShopPublish({ defaultPayee }: { defaultPayee: string }) {
         createdAt: new Date().toISOString(),
         intent: "shop",
         sourceImage: thumb,
+        doorbell,
         metrics: { photoToPublishMs: elapsedSince(draft.startedAt), editsPerItem: Number((draft.edits / Math.max(1, items.length)).toFixed(2)) },
       };
       upsertStall(stall);

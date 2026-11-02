@@ -22,7 +22,8 @@ export function buildCsp(nonce: string, isDev: boolean): string {
     // Market-check product photos come from many retailer CDNs; images cannot run script.
     "img-src": ["'self'", "blob:", "data:", "https:", ...PAYPAL_IMG],
     "font-src": ["'self'"],
-    "connect-src": ["'self'", ...PAYPAL_CONNECT, ...(isDev ? ["ws:"] : [])],
+    // ntfy.sh carries the live-counter doorbell (order IDs only).
+    "connect-src": ["'self'", ...PAYPAL_CONNECT, "https://ntfy.sh", ...(isDev ? ["ws:"] : [])],
     "frame-src": PAYPAL_FRAME,
     "media-src": ["'self'", "blob:"],
     "worker-src": ["'self'", "blob:"],

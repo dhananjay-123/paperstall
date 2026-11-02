@@ -1,5 +1,13 @@
 # Changelog
 
+## Live counter and design overhaul (2026-11-02)
+- Live counter: paid orders appear in the studio by themselves via an ntfy.sh doorbell, each re-checked with PayPal; pickup codes on receipts and cards; one recording tab per stall; cross-device "already counted".
+- Studio redesigned as a dashboard: live orders with stats, sales ledger, My stall (paper → QR poster) and Penny side by side; bottom tab bar on phones.
+- New logo (awning over a circled price list) as an SVG that follows the theme, plus a new app icon.
+- Landing page: an interactive paper-to-paid walkthrough on the taco sample, a "screenshot is not a payment" check, a sample switcher on cached Reads, and the verification trail.
+- Type moved to Schibsted Grotesk with Caveat notes; cooler paper; chalk yellow for primary actions in dark mode.
+- Storefront reads like a menu; the Read page scans and uses chalk-coloured circles on chalkboards; verify works from a desk (mirrored webcam, grouped order ID, USB QR scanners).
+
 ## Live sandbox run, tax and samples (2026-11-02)
 - Full sandbox flow verified: stall checkout with the buyer account → receipt → Scan to confirm → ledger; invoice send + QR; plan + subscription create; partial refund.
 - Tax: the Read picks up tax amounts and stated rates; stalls charge tax as a rate (PayPal `tax_total`), verify includes it, invoices add it as a line. Menus show a sales-tax rate instead of a meaningless "total".

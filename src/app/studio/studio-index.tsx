@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { EmptyBoard } from "@/components/empty-board";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/core/money";
 import { useStore } from "@/lib/store";
@@ -11,6 +12,17 @@ export function StudioIndex() {
   const invoices = useStore((s) => s.invoices);
   const plans = useStore((s) => s.plans);
   const empty = !stalls.length && !invoices.length && !plans.length;
+
+  if (empty) {
+    return (
+      <EmptyBoard
+        title="No stalls yet"
+        body="Snap a price list, a bill for a customer or a monthly notice. Your stall, invoices and plans will all live here."
+        action="Start with a photo"
+        href="/new"
+      />
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-8 px-4 py-8">
@@ -22,7 +34,6 @@ export function StudioIndex() {
           </Link>
         </Button>
       </header>
-      {empty ? <p className="rounded-xl border border-dashed p-6 text-muted-foreground">Nothing here yet. Snap a price list, a bill or a monthly notice to start.</p> : null}
       {stalls.length ? (
         <Section title="Stalls">
           {stalls.map((s) => (

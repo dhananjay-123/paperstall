@@ -1,6 +1,6 @@
 "use client";
 
-// Receipts live on the buyer's device only. The seller learns about the sale by scanning it.
+// Receipts live on the buyer's device only. The seller hears about the sale on the live counter, or by scanning it.
 
 export type BuyerReceipt = {
   orderId: string;
@@ -12,6 +12,7 @@ export type BuyerReceipt = {
   items: { name: string; quantity: number }[];
   at: string;
   receiptCode: string;
+  pickupCode?: string;
 };
 
 const KEY = "paperstall:buyer-receipts:v1";

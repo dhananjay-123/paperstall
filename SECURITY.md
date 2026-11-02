@@ -13,6 +13,7 @@ Paperstall handles payments, so it is built like a payments product. This file d
 - Stall links are HMAC-SHA256 signed (128-bit truncated, constant-time compare) with a version and a one-year expiry. Every money route re-verifies the signature and recomputes prices from the signed stall; client totals are never used. Editing a price in the URL gives `STALL_TAMPERED`.
 - `PayPal-Request-Id` on every POST; deterministic ids for capture and refund.
 - **Verify-to-record:** a sale enters the ledger only after `GET /v2/checkout/orders/{id}` passes `verifyOrder`: completed order and capture, payee = stall payee, every line priced as on the stall, totals equal, currency equal, right stall, not already recorded (order id or capture id). Receipt QRs are HMAC-signed; forged or other-stall receipts are rejected. Every fail reason is unit-tested.
+- **Live counter:** a doorbell message is only a nudge. Each order is re-checked with PayPal by the seller's device before it shows or counts, so forged messages create nothing. The topic is a random secret, sealed (AES-256-GCM, key derived from the signing secret) inside the signed link, and never accepted from the client at signing. A 4-character HMAC pickup code on the receipt and the counter card stops someone claiming another buyer's order. One tab per stall records (Web Locks), and devices share counted order IDs on the topic.
 - Refunds are capped at the captured amount on the server. Invoices are only sent if PayPal's computed total equals ours.
 
 ## AI safety
@@ -24,7 +25,7 @@ Paperstall handles payments, so it is built like a payments product. This file d
 Image type sniffed by magic bytes (JPEG/PNG/WebP), ≤4 MB after client downscaling to ≤1600 px; request size caps on every route; text length caps in every schema; signed stall length cap.
 
 ## HTTP hardening (`src/proxy.ts`, `src/lib/csp.ts`, unit-tested)
-- CSP: scripts only from our origin with a per-request nonce plus `'strict-dynamic'` and PayPal hosts; frames only PayPal/Venmo; `object-src 'none'`; `base-uri 'self'`; `form-action` self + PayPal; `frame-ancestors 'none'`; `upgrade-insecure-requests` in production; `'unsafe-eval'` only in development.
+- CSP: scripts only from our origin with a per-request nonce plus `'strict-dynamic'` and PayPal hosts; `connect-src` adds only `https://ntfy.sh` for the live counter; frames only PayPal/Venmo; `object-src 'none'`; `base-uri 'self'`; `form-action` self + PayPal; `frame-ancestors 'none'`; `upgrade-insecure-requests` in production; `'unsafe-eval'` only in development.
 - `style-src` allows `'unsafe-inline'` (server-rendered `style` attributes can't carry a nonce). `img-src` allows `https:` for market-check product photos; images can't run script.
 - `Referrer-Policy: strict-origin-when-cross-origin`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Permissions-Policy` (camera on self only), HSTS in production.
 
@@ -32,7 +33,7 @@ Image type sniffed by magic bytes (JPEG/PNG/WebP), ≤4 MB after client downscal
 Per-IP token-bucket rate limits on AI, PayPal and stall routes (best-effort on serverless: each instance has its own buckets). Same-origin check on mutating routes. CORS is closed except the read-only OpenAPI spec.
 
 ## Privacy
-No analytics or trackers; no PII in server logs (errors log only an error name). `/privacy` explains what stays on the device and what goes to PayPal, Gemini and Channel3.
+No analytics or trackers; no PII in server logs (errors log only an error name). `/privacy` explains what stays on the device and what goes to PayPal, Gemini, Channel3 and ntfy.sh (order IDs only).
 
 ## Not yet done
 `pnpm audit` review, an external header scan on the deployed URL, and webhook signature verification (no webhooks are used).

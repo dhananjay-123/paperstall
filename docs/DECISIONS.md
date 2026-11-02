@@ -51,3 +51,8 @@ Short ADRs: context → decision → consequences.
 **Context:** Paper-based small sellers exist everywhere; judges and sandbox accounts are US-based.
 **Decision:** No country-specific framing. Samples: coffee cart, a freelancer's bill, a piano-lessons notice, a phone-accessories stall and an optional Spanish menu. USD sandbox accounts; other currencies supported where PayPal supports them.
 **Consequences:** Copy and samples work for any judge; translation is shown through the Spanish sample.
+
+## ADR-012 — Live counter over an ntfy.sh "doorbell"
+**Context:** Sellers at a laptop or tablet can't easily scan a buyer's phone, and self-serve buyers pay without the seller seeing it. There is no database to fan out "new order" events, and PayPal can't list a merchant's recent orders.
+**Decision:** After a verified capture the server posts only the order ID to a per-stall ntfy.sh topic. The topic is random, returned to the seller once at publish, and carried in the link sealed with AES-256-GCM. The seller's studio subscribes over SSE, re-checks every order with PayPal, and shows it with an HMAC pickup code. A Web Lock keeps recording to one tab per stall; devices post "counted" messages to the same topic for cross-device replay protection.
+**Consequences:** Free, no signup, no new server state. The message is untrusted by design, so a forged or replayed doorbell can't create a sale. The cost is a dependency on ntfy.sh's public tier (250 messages a day per sender, about 12 hours of history): receipt scanning stays as the fallback, and ntfy can be self-hosted.

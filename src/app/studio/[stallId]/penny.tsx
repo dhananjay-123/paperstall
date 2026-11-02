@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, Sparkles } from "lucide-react";
 import { ApprovalCard, type Proposal } from "@/components/approval/approval-card";
 import { Button } from "@/components/ui/button";
 import type { AgentProposal } from "@/core/agent";
@@ -10,6 +10,7 @@ import { peekStall } from "@/core/peek";
 import type { Stall } from "@/core/stall";
 import { api, ApiCallError } from "@/lib/api-client";
 import { useStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 
 type Msg = { role: "user" | "model"; text: string; proposals?: AgentProposal[] };
 
@@ -21,7 +22,7 @@ const EXAMPLES = [
   "How did the stall do today?",
 ];
 
-export function Penny({ stall }: { stall: Stall }) {
+export function Penny({ stall, compact = false }: { stall: Stall; compact?: boolean }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -79,15 +80,23 @@ export function Penny({ stall }: { stall: Stall }) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_minmax(0,22rem)]">
-      <section className="flex min-h-[28rem] flex-col rounded-2xl border bg-card">
+    <div className={compact ? "" : "grid gap-4 lg:grid-cols-[1fr_minmax(0,22rem)]"}>
+      <section className={cn("flex flex-col rounded-2xl border bg-card", compact ? "max-h-[calc(100vh-7rem)] min-h-[24rem]" : "min-h-[28rem]")}>
+        {compact ? (
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <p className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-ink">
+              <Sparkles className="size-5 text-action dark:text-chalk" /> Penny
+            </p>
+            <span className="text-xs text-muted-foreground">Asks before moving money</span>
+          </div>
+        ) : null}
         <div className="flex-1 space-y-4 overflow-y-auto p-4" aria-live="polite">
           {!msgs.length ? (
             <div className="space-y-3">
               <p className="font-serif text-2xl text-ink">Hi, I&apos;m Penny.</p>
               <p className="text-sm text-muted-foreground">I can check payments, chase invoices, refund and ship. Anything that moves money waits for your approval.</p>
               <div className="flex flex-wrap gap-2">
-                {EXAMPLES.map((e) => (
+                {(compact ? EXAMPLES.slice(0, 3) : EXAMPLES).map((e) => (
                   <button key={e} onClick={() => void send(e)} className="rounded-full border bg-background px-3 py-1.5 text-left text-sm hover:border-action focus-visible:ring-3 focus-visible:ring-ring/50 outline-none">
                     {e}
                   </button>
@@ -125,6 +134,7 @@ export function Penny({ stall }: { stall: Stall }) {
           </Button>
         </form>
       </section>
+      {compact ? null : (
       <aside className="space-y-2 text-sm text-muted-foreground">
         <p className="font-medium text-foreground">How Penny stays safe</p>
         <ul className="list-disc space-y-1 pl-5">
@@ -134,6 +144,7 @@ export function Penny({ stall }: { stall: Stall }) {
           <li>At most 5 tool steps per question.</li>
         </ul>
       </aside>
+      )}
     </div>
   );
 
@@ -273,8 +284,8 @@ function buildProposal(p: AgentProposal, stall: Stall, ledger: { n: number; entr
       run: async () => {
         const id = crypto.randomUUID();
         const payload = { id, n: String(a.name).slice(0, 60), c, p: stall.payload.p, i: [{ id: "item", name: String(a.name).slice(0, 80), price }], t: stall.payload.t };
-        const { signed } = await api<{ signed: string }>("/api/v1/stalls/sign", { body: { payload } });
-        s.upsertStall({ id, payload: peekStall(signed)!, signed, createdAt: new Date().toISOString(), intent: "shop" });
+        const { signed, doorbell } = await api<{ signed: string; doorbell?: string }>("/api/v1/stalls/sign", { body: { payload } });
+        s.upsertStall({ id, payload: peekStall(signed)!, signed, createdAt: new Date().toISOString(), intent: "shop", doorbell });
         const url = `${window.location.origin}/s#${signed}`;
         void navigator.clipboard?.writeText(url);
         return "Link created and copied. It's also in your stalls list.";

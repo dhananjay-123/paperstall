@@ -163,26 +163,72 @@ function ReadingSkeleton() {
   );
 }
 
+// Average brightness of a small copy of the photo: chalkboards need chalk-coloured circles.
+function isDarkImage(img: HTMLImageElement): boolean {
+  try {
+    const c = document.createElement("canvas");
+    c.width = 32;
+    c.height = 32;
+    const ctx = c.getContext("2d");
+    if (!ctx) return false;
+    ctx.drawImage(img, 0, 0, 32, 32);
+    const px = ctx.getImageData(0, 0, 32, 32).data;
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) sum += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+    return sum / (px.length / 4) < 100;
+  } catch {
+    return false;
+  }
+}
+
 function PaperPane({ draft, phase }: { draft: DraftRead; phase: Phase }) {
+  const reduce = useReducedMotion();
+  const [dark, setDark] = useState(false);
   const read = draft.read;
   const currency = read ? effectiveCurrency(draft) : null;
   const math = read && currency ? mathCheck(read, currency) : null;
+  const ink = dark ? { color: "var(--chalk)", blend: false, strokeWidth: 2.25 } : { color: "var(--action)" };
   return (
     <div className="lg:sticky lg:top-20 lg:self-start">
-      <div className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
+      <div className="relative overflow-hidden rounded-2xl border bg-white shadow-[0_18px_40px_-22px_rgb(20_30_25/0.5)]">
         {/* eslint-disable-next-line @next/next/no-img-element -- local data URL of the seller's own photo */}
-        <img src={draft.imageDataUrl} alt="Your paper" className="block h-auto w-full" />
-        {phase.kind === "reading" ? <div className="absolute inset-0 animate-pulse bg-gradient-to-b from-transparent via-sky/10 to-transparent" /> : null}
+        <img src={draft.imageDataUrl} alt="Your paper" className="block h-auto w-full" onLoad={(e) => setDark(isDarkImage(e.currentTarget))} />
+        {phase.kind === "reading" ? (
+          reduce ? (
+            <div className="absolute inset-0 bg-sky/10" />
+          ) : (
+            <motion.div
+              aria-hidden
+              className="absolute inset-x-0 h-24 bg-gradient-to-b from-transparent via-sky/30 to-transparent"
+              initial={{ top: "-20%" }}
+              animate={{ top: ["-20%", "100%"] }}
+              transition={{ duration: 1.8, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }}
+            >
+              <div className="absolute inset-x-0 top-1/2 h-px bg-sky" />
+            </motion.div>
+          )
+        ) : null}
         {read?.items.map((it, i) => (
-          <InkCircle key={it.id} box={it.box as unknown as Box} seed={i + 3} delay={0.15 + i * 0.12} color="var(--action)" />
+          <InkCircle key={it.id} box={it.box as unknown as Box} seed={i + 3} delay={0.15 + i * 0.12} {...ink} />
         ))}
         {math && !math.ok && read?.writtenTotalBox ? (
-          <InkCircle box={read.writtenTotalBox as unknown as Box} seed={99} delay={0.3 + read.items.length * 0.12} color="var(--danger)" />
+          <InkCircle box={read.writtenTotalBox as unknown as Box} seed={99} delay={0.3 + read.items.length * 0.12} color="var(--danger)" blend={!dark} />
         ) : null}
         {draft.cached ? (
           <span className="absolute top-3 left-3 rounded-full bg-warning px-2 py-0.5 text-xs font-medium text-white">cached result</span>
         ) : null}
       </div>
+      {read ? (
+        <motion.p
+          className="mt-3 text-center font-hand text-xl text-action"
+          initial={reduce ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 + read.items.length * 0.12 }}
+        >
+          {read.items.length === 1 ? "found 1 item" : `found ${read.items.length} items`}
+          {read.sourceLanguage && read.sourceLanguage !== "en" ? ", translated to English" : ""}
+        </motion.p>
+      ) : null}
     </div>
   );
 }
