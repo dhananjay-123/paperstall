@@ -1,0 +1,162 @@
+{
+ "intent": "shop",
+ "intentReason": "Found 8 items with prices on a menu board for a coffee cart.",
+ "business": {
+  "name": "Rosa's Coffee Cart",
+  "kind": "Coffee Cart"
+ },
+ "sourceLanguage": "en",
+ "currency": {
+  "detected": "USD",
+  "symbolSeen": "$",
+  "confidence": 0.8
+ },
+ "items": [
+  {
+   "id": "espresso",
+   "nameOriginal": "Espresso",
+   "nameEn": "Espresso",
+   "unitPrice": 3,
+   "box": [
+    235,
+    160,
+    300,
+    855
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "latte",
+   "nameOriginal": "Latte",
+   "nameEn": "Latte",
+   "unitPrice": 4.5,
+   "box": [
+    310,
+    160,
+    375,
+    855
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "cappuccino",
+   "nameOriginal": "Cappuccino",
+   "nameEn": "Cappuccino",
+   "unitPrice": 4.25,
+   "box": [
+    385,
+    160,
+    450,
+    855
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "cold-brew",
+   "nameOriginal": "Cold Brew",
+   "nameEn": "Cold Brew",
+   "unitPrice": 4.75,
+   "box": [
+    460,
+    155,
+    525,
+    855
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "chai-latte",
+   "nameOriginal": "Chai Latte",
+   "nameEn": "Chai Latte",
+   "unitPrice": 4.5,
+   "box": [
+    535,
+    150,
+    600,
+    855
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "croissant",
+   "nameOriginal": "Croissant",
+   "nameEn": "Croissant",
+   "unitPrice": 3.5,
+   "box": [
+    610,
+    145,
+    675,
+    855
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "blueberry-muffin",
+   "nameOriginal": "Blueberry Muffin",
+   "nameEn": "Blueberry Muffin",
+   "unitPrice": 3.25,
+   "box": [
+    685,
+    140,
+    750,
+    855
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "banana-bread",
+   "nameOriginal": "Banana Bread",
+   "nameEn": "Banana Bread",
+   "unitPrice": 3.75,
+   "box": [
+    760,
+    135,
+    825,
+    855
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "oat-milk",
+   "nameOriginal": "oat milk +50c",
+   "nameEn": "Oat milk add-on",
+   "unitPrice": 0.5,
+   "box": [
+    860,
+    370,
+    905,
+    585
+   ],
+   "confidence": 0.9,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  }
+ ],
+ "questions": [],
+ "warnings": []
+}

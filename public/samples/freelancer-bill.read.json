@@ -1,0 +1,113 @@
+{
+ "intent": "invoice",
+ "intentReason": "Found 'INVOICE' header, specific customer details, itemized services, and a total.",
+ "business": {
+  "name": "Sam Lee Design",
+  "kind": "Design services"
+ },
+ "sourceLanguage": "en",
+ "currency": {
+  "detected": "USD",
+  "symbolSeen": "$",
+  "confidence": 0.7
+ },
+ "items": [
+  {
+   "id": "logo-design",
+   "nameOriginal": "Logo design",
+   "nameEn": "Logo design",
+   "unitPrice": 350,
+   "quantity": 1,
+   "box": [
+    408,
+    208,
+    458,
+    861
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "business-cards",
+   "nameOriginal": "Business cards (200)",
+   "nameEn": "Business cards (200 units)",
+   "unitPrice": 40,
+   "quantity": 1,
+   "box": [
+    461,
+    203,
+    510,
+    861
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "shop-sign",
+   "nameOriginal": "Shop sign artwork",
+   "nameEn": "Shop sign artwork",
+   "unitPrice": 120,
+   "quantity": 1,
+   "box": [
+    508,
+    211,
+    561,
+    864
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "social-templates",
+   "nameOriginal": "Social templates (10)",
+   "nameEn": "Social media templates (10 units)",
+   "unitPrice": 90,
+   "quantity": 1,
+   "box": [
+    558,
+    208,
+    614,
+    873
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  }
+ ],
+ "customer": {
+  "name": "Priya Shah",
+  "email": "priya@bloomflorist.example.com",
+  "company": "Bloom Florist"
+ },
+ "dates": {
+  "issued": "2026-11-02",
+  "due": "2026-11-16"
+ },
+ "writtenTotal": 600,
+ "writtenTotalBox": [
+  645,
+  498,
+  695,
+  868
+ ],
+ "taxOrNotes": "Pay by PayPal",
+ "questions": [
+  {
+   "id": "currency-check",
+   "ask": "The currency symbol is '$'. Is this USD, CAD, or another currency?",
+   "options": [
+    "USD",
+    "CAD",
+    "AUD"
+   ]
+  }
+ ],
+ "warnings": []
+}

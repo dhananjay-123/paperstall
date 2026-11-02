@@ -1,4 +1,5 @@
-// Built-in samples are real photos of paper props in /public/samples. A sample is shown only
+// Built-in samples are rendered paper props in /public/samples (`python scripts/make-samples.py public/samples`;
+// swap in real photos any time). A sample is shown only
 // when its photo exists. `<id>.read.json` (optional) is a cached result from a real earlier
 // run, offered only when the live Read is rate-limited, and always labelled "cached".
 

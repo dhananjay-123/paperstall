@@ -1,0 +1,130 @@
+{
+ "intent": "shop",
+ "intentReason": "Found 7 food and drink items with prices on a menu board.",
+ "business": {
+  "name": "Tacos Doña María",
+  "kind": "Taco Shop"
+ },
+ "sourceLanguage": "es",
+ "currency": {
+  "detected": "USD",
+  "symbolSeen": "$",
+  "confidence": 1
+ },
+ "items": [
+  {
+   "id": "tacos-pastor",
+   "nameOriginal": "Tacos al pastor (3)",
+   "nameEn": "Al pastor tacos (3)",
+   "unitPrice": 9,
+   "box": [
+    268,
+    145,
+    320,
+    845
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "tacos-carnitas",
+   "nameOriginal": "Tacos de carnitas (3)",
+   "nameEn": "Carnitas tacos (3)",
+   "unitPrice": 9,
+   "box": [
+    348,
+    145,
+    400,
+    845
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "quesadilla-queso",
+   "nameOriginal": "Quesadilla de queso",
+   "nameEn": "Cheese quesadilla",
+   "unitPrice": 7,
+   "box": [
+    428,
+    145,
+    480,
+    845
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "elote-asado",
+   "nameOriginal": "Elote asado",
+   "nameEn": "Grilled corn",
+   "unitPrice": 5,
+   "box": [
+    508,
+    145,
+    560,
+    845
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "agua-horchata",
+   "nameOriginal": "Agua de horchata",
+   "nameEn": "Horchata water",
+   "unitPrice": 3,
+   "box": [
+    588,
+    145,
+    640,
+    845
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "agua-jamaica",
+   "nameOriginal": "Agua de jamaica",
+   "nameEn": "Hibiscus water",
+   "unitPrice": 3,
+   "box": [
+    668,
+    145,
+    720,
+    845
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "churros",
+   "nameOriginal": "Churros (4)",
+   "nameEn": "Churros (4)",
+   "unitPrice": 4,
+   "box": [
+    748,
+    145,
+    800,
+    845
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  }
+ ],
+ "questions": [],
+ "warnings": []
+}

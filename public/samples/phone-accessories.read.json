@@ -1,0 +1,146 @@
+{
+ "intent": "shop",
+ "intentReason": "Found 7 items with prices and no customer name → storefront.",
+ "business": {
+  "name": "PHONE ZONE",
+  "kind": "Electronics store"
+ },
+ "sourceLanguage": "en",
+ "currency": {
+  "detected": "USD",
+  "symbolSeen": "$",
+  "confidence": 0.8
+ },
+ "items": [
+  {
+   "id": "jbl-go-4",
+   "nameOriginal": "JBL Go 4 speaker",
+   "nameEn": "JBL Go 4 speaker",
+   "unitPrice": 49,
+   "box": [
+    300,
+    135,
+    350,
+    860
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": true,
+    "searchQuery": "JBL Go 4"
+   }
+  },
+  {
+   "id": "anker-powerbank",
+   "nameOriginal": "Anker 10000mAh power bank",
+   "nameEn": "Anker 10000mAh power bank",
+   "unitPrice": 29,
+   "box": [
+    375,
+    135,
+    425,
+    860
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": true,
+    "searchQuery": "Anker 10000mAh power bank"
+   }
+  },
+  {
+   "id": "airpods-pro-2",
+   "nameOriginal": "AirPods Pro 2",
+   "nameEn": "AirPods Pro 2",
+   "unitPrice": 199,
+   "box": [
+    450,
+    135,
+    500,
+    860
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": true,
+    "searchQuery": "AirPods Pro 2"
+   }
+  },
+  {
+   "id": "apple-20w-charger",
+   "nameOriginal": "Apple 20W USB-C charger",
+   "nameEn": "Apple 20W USB-C charger",
+   "unitPrice": 19,
+   "box": [
+    525,
+    135,
+    575,
+    860
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": true,
+    "searchQuery": "Apple 20W USB-C charger"
+   }
+  },
+  {
+   "id": "samsung-25w-charger",
+   "nameOriginal": "Samsung 25W charger",
+   "nameEn": "Samsung 25W charger",
+   "unitPrice": 15,
+   "box": [
+    600,
+    135,
+    650,
+    860
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": true,
+    "searchQuery": "Samsung 25W charger"
+   }
+  },
+  {
+   "id": "spigen-case",
+   "nameOriginal": "Spigen phone case",
+   "nameEn": "Spigen phone case",
+   "unitPrice": 15,
+   "box": [
+    675,
+    135,
+    725,
+    860
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": true,
+    "searchQuery": "Spigen phone case"
+   }
+  },
+  {
+   "id": "usb-c-cable-2m",
+   "nameOriginal": "USB-C cable 2m",
+   "nameEn": "USB-C cable 2m",
+   "unitPrice": 8,
+   "box": [
+    750,
+    135,
+    800,
+    860
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  }
+ ],
+ "questions": [
+  {
+   "id": "currency",
+   "ask": "Is the currency USD?",
+   "options": [
+    "USD",
+    "CAD",
+    "AUD"
+   ]
+  }
+ ],
+ "warnings": []
+}

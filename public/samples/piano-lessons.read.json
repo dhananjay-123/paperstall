@@ -1,0 +1,64 @@
+{
+ "intent": "subscription",
+ "intentReason": "Found recurring monthly prices for piano lessons.",
+ "business": {
+  "name": "Piano Lessons with Ms. Elena",
+  "kind": "Piano Teacher"
+ },
+ "sourceLanguage": "en",
+ "currency": {
+  "detected": "USD",
+  "symbolSeen": "$",
+  "confidence": 0.7
+ },
+ "items": [
+  {
+   "id": "standard-lesson",
+   "nameOriginal": "Weekly 45-min lesson",
+   "nameEn": "Weekly 45-minute piano lesson",
+   "unitPrice": 120,
+   "interval": "month",
+   "box": [
+    455,
+    215,
+    625,
+    760
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  },
+  {
+   "id": "sibling-lesson",
+   "nameOriginal": "Sibling lesson",
+   "nameEn": "Sibling piano lesson",
+   "unitPrice": 90,
+   "interval": "month",
+   "box": [
+    645,
+    225,
+    715,
+    745
+   ],
+   "confidence": 0.95,
+   "retail": {
+    "isBrandedProduct": false
+   }
+  }
+ ],
+ "taxOrNotes": "Beginners & kids welcome. First lesson free!",
+ "questions": [
+  {
+   "id": "currency_code",
+   "ask": "Which currency is used for these prices?",
+   "options": [
+    "USD",
+    "CAD",
+    "AUD",
+    "NZD"
+   ]
+  }
+ ],
+ "warnings": []
+}
