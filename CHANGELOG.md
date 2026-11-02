@@ -1,5 +1,18 @@
 # Changelog
 
+## Demo fixes (2026-11-03)
+Found while recording the demo video; each was reproduced on the sandbox and re-checked after the fix.
+- Fixed: the invoice QR was a broken image. PayPal's multipart response put the `text/plain` part header in front of the base64; extraction now starts at the PNG signature.
+- Fixed: Penny's approval card reset to a new pending card after Approve. Cards are now built once per reply, keep their result (refund id and debug_id), and never offer Approve twice.
+- Fixed: "refund one horchata from the last order" proposed half the order. Penny now sees line items through `list_orders`, and the server resolves "last order" / "order N" to the real PayPal order and prices named items from the signed stall.
+- Fixed: Penny claimed a card existed when it couldn't be matched; her reply now says nothing was proposed.
+- Fixed: the approval card's amount field accepted "10.5300". It now takes a positive amount with at most the currency's decimals, up to what's refundable, and the header and PayPal call show the edited amount.
+- Fixed: `/verify` opened from the nav did nothing until a stall was passed in the URL.
+- Fixed: the market check matched AirPods to $25 cases and suggested "$19.90". Accessory listings are dropped, and the price guard needs a strong match and three agreeing stores.
+- Gemini: one fallback model on 503/429/timeouts, a plain "Today's free AI reads are used up" message (with the cached sample) on a daily cap, Penny and the concierge capped at about 12 s, and upstream failures logged on the server.
+- The landing page's screenshot check is labelled as an illustration; the live check is on `/verify`.
+- Receipts and live-counter cards show "Partly refunded $X" after a partial refund.
+
 ## Icons and studio header (2026-11-03)
 - Favicon redrawn with heavier strokes so it reads at 16px; added `favicon.ico`, an Apple touch icon, and 192/512/maskable PNGs in the manifest.
 - Removed the "Live" status pill from the studio header.

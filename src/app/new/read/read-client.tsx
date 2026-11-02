@@ -21,7 +21,7 @@ import { SAMPLES } from "@/lib/samples";
 import { useStore, type DraftRead } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-type Phase = { kind: "reading" } | { kind: "waiting"; until: number; message: string } | { kind: "error"; message: string; debugId?: string } | { kind: "done" };
+type Phase = { kind: "reading" } | { kind: "waiting"; until: number; message: string } | { kind: "error"; message: string; debugId?: string; quota?: boolean } | { kind: "done" };
 
 const STAMP: Record<Intent, StampKind> = { shop: "shop", invoice: "invoice", subscription: "monthly", unknown: "unknown" };
 const INTENT_LABEL: Record<Exclude<Intent, "unknown">, string> = { shop: "Shop", invoice: "Invoice", subscription: "Subscription" };
@@ -46,7 +46,10 @@ export function ReadClient() {
       patchDraft({ read: res.read, aup: res.aup ?? [], aupChecked: res.aupChecked, cached: false });
       setPhase({ kind: "done" });
     } catch (e) {
-      if (e instanceof ApiCallError && e.status === 429) {
+      if (e instanceof ApiCallError && e.error.code === "AI_DAILY_LIMIT") {
+        // A daily cap won't lift in a minute: say so and offer the cached samples instead of retrying.
+        setPhase({ kind: "error", message: e.error.message, quota: true });
+      } else if (e instanceof ApiCallError && e.status === 429) {
         const secs = Math.min(90, e.error.retryAfter ?? 20);
         setPhase({ kind: "waiting", until: Date.now() + secs * 1000, message: e.error.message });
       } else {
@@ -132,13 +135,23 @@ export function ReadClient() {
         ) : null}
         {phase.kind === "error" ? (
           <div role="alert" className="space-y-3 rounded-xl border border-danger/40 bg-card p-5">
-            <p className="font-serif text-2xl text-danger-ink">Couldn&apos;t read that</p>
+            <p className="font-serif text-2xl text-danger-ink">{phase.quota ? "Out of AI reads for today" : "Couldn’t read that"}</p>
             <p className="text-sm">{phase.message}</p>
             {phase.debugId ? <p className="font-mono text-xs text-muted-foreground">debug_id {phase.debugId}</p> : null}
             <div className="flex flex-wrap gap-2">
-              <Button variant="action" size="sm" onClick={() => void runRead()}>
-                <RotateCcw /> Try again
-              </Button>
+              {phase.quota && sample ? (
+                <Button variant="action" size="sm" onClick={useCachedSample}>
+                  Use a cached result from a real earlier run
+                </Button>
+              ) : phase.quota ? (
+                <Button variant="action" size="sm" asChild>
+                  <Link href="/new?mode=samples">Try a sample</Link>
+                </Button>
+              ) : (
+                <Button variant="action" size="sm" onClick={() => void runRead()}>
+                  <RotateCcw /> Try again
+                </Button>
+              )}
               <Button variant="outline" size="sm" asChild>
                 <Link href="/new">Use another photo</Link>
               </Button>
@@ -392,7 +405,7 @@ function ReadEditor({ draft, onContinue }: { draft: DraftRead; onContinue: (inte
         <ul className="space-y-2">
           {read.items.map((it, i) => {
             const m = draft.market?.[it.id] ?? null;
-            const guard = m ? priceGuard(it.unitPrice, m, fmt) : null;
+            const guard = m ? priceGuard(it.unitPrice, m, fmt, it.nameEn) : null;
             const blockedReason = aupBlocked.get(it.id);
             const itemFlags = flags.filter((f) => f.itemId === it.id);
             return (

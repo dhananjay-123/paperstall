@@ -223,11 +223,15 @@ export async function invoiceQrPng(id: string, ctx: Ctx = {}): Promise<string> {
   return extractBase64Png(raw);
 }
 
+// The response is multipart: part headers such as "Content-Type: text/plain" sit right before the
+// base64, so anchor on the PNG signature and stop at the first character outside the alphabet.
 export function extractBase64Png(raw: string): string {
-  const runs = raw.match(/[A-Za-z0-9+/=\r\n]{200,}/g) ?? [];
-  const best = runs.sort((a, b) => b.length - a.length)[0];
-  if (!best) throw new Error("PayPal QR response had no image data");
-  return best.replace(/\s+/g, "");
+  const start = raw.indexOf("iVBORw0KGgo");
+  if (start < 0) throw new Error("PayPal QR response had no image data");
+  const run = /^[A-Za-z0-9+/=\r\n]+/.exec(raw.slice(start))?.[0] ?? "";
+  const b64 = run.replace(/\s+/g, "");
+  if (b64.length < 100) throw new Error("PayPal QR response had no image data");
+  return b64;
 }
 
 // Catalog Products v1 + Subscriptions v1.

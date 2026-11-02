@@ -8,6 +8,7 @@ const schema = z.object({
   GEMINI_API_KEY: optional,
   GEMINI_MODEL: optional,
   GEMINI_FAST_MODEL: optional,
+  GEMINI_FALLBACK_MODEL: optional,
   PAYPAL_CLIENT_ID: optional,
   PAYPAL_CLIENT_SECRET: optional,
   PAYPAL_ENV: z.enum(["sandbox"]).default("sandbox"),

@@ -15,12 +15,20 @@ function ai() {
   return client;
 }
 
+// Used once when the chosen model is overloaded (503) or out of quota (429). It has its own free-tier quota.
+export const DEFAULT_FALLBACK_MODEL = "gemini-3.5-flash";
+
 export function models() {
-  return { main: env.GEMINI_MODEL ?? DEFAULT_MODEL, fast: env.GEMINI_FAST_MODEL ?? env.GEMINI_MODEL ?? DEFAULT_FAST_MODEL };
+  return {
+    main: env.GEMINI_MODEL ?? DEFAULT_MODEL,
+    fast: env.GEMINI_FAST_MODEL ?? env.GEMINI_MODEL ?? DEFAULT_FAST_MODEL,
+    fallback: env.GEMINI_FALLBACK_MODEL ?? DEFAULT_FALLBACK_MODEL,
+  };
 }
 
 function statusOf(err: unknown): number | undefined {
   if (typeof err === "object" && err && "status" in err && typeof err.status === "number") return err.status;
+  if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError" || /\baborted\b|timed? ?out/i.test(err.message))) return 504;
   const m = err instanceof Error ? /\b(429|500|502|503|504)\b/.exec(err.message) : null;
   return m ? Number(m[1]) : undefined;
 }
@@ -30,6 +38,13 @@ function retryDelaySeconds(err: unknown): number | undefined {
   return m ? Math.ceil(Number(m[1] ?? m[2])) : undefined;
 }
 
+/** A free-tier *daily* cap: waiting a minute won't help, so don't count down to a retry. */
+export function isDailyQuota(err: unknown): boolean {
+  if (statusOf(err) !== 429) return false;
+  const msg = err instanceof Error ? err.message : "";
+  return /per ?day|PerDay/i.test(msg) || (retryDelaySeconds(err) ?? 0) > 3600;
+}
+
 type GenOpts = {
   model?: string;
   contents: Content[];
@@ -37,36 +52,86 @@ type GenOpts = {
   receipts?: ReceiptBook;
   note?: string;
   timeoutMs?: number;
+  /** Wall-clock deadline (Date.now() ms) shared by retries and the fallback. */
+  deadline?: number;
+  /** false: no fallback model. */
+  fallback?: boolean;
 };
 
-/** generateContent with a timeout and backoff on 429/5xx. Surfaces a RATE_LIMITED error the UI can count down. */
-export async function generate(opts: GenOpts) {
-  const model = opts.model ?? models().main;
+class Upstream extends Error {
+  constructor(
+    readonly model: string,
+    readonly err: unknown,
+  ) {
+    super(err instanceof Error ? err.message : String(err));
+  }
+  get status() {
+    return statusOf(this.err) ?? 0;
+  }
+}
+
+async function attempt(model: string, opts: GenOpts, tries: number) {
   let lastErr: unknown;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let i = 0; i < tries; i++) {
+    const left = opts.deadline ? opts.deadline - Date.now() : Infinity;
+    if (left < 1500) break;
     const started = Date.now();
     try {
       const res = await ai().models.generateContent({
         model,
         contents: opts.contents,
-        config: { ...opts.config, abortSignal: AbortSignal.timeout(opts.timeoutMs ?? 45_000) },
+        config: { ...opts.config, abortSignal: AbortSignal.timeout(Math.min(opts.timeoutMs ?? 45_000, left)) },
       });
       opts.receipts?.add({ service: "gemini", method: "POST", path: `models/${model}:generateContent`, status: 200, ok: true, ms: Date.now() - started, note: opts.note });
       return res;
     } catch (err) {
       const status = statusOf(err) ?? 0;
       opts.receipts?.add({ service: "gemini", method: "POST", path: `models/${model}:generateContent`, status, ok: false, ms: Date.now() - started, note: opts.note });
+      // The server log is the only place an upstream outage shows up, so say what Gemini answered.
+      console.warn(`[gemini] ${model} ${opts.note ?? ""} → ${status || "error"} after ${Date.now() - started}ms: ${(err instanceof Error ? err.message : String(err)).slice(0, 200)}`);
       lastErr = err;
-      const retryable = status === 429 || status >= 500;
-      if (!retryable) break;
-      const wait = retryDelaySeconds(err);
-      // Don't hold a serverless function for a long free-tier quota window: hand it to the UI.
-      if (status === 429 && (wait ?? 0) > 8) throw new HttpError(429, "AI_RATE_LIMITED", "The AI is busy. Ink is drying…", { retryAfter: wait });
-      if (attempt < 2) await new Promise((r) => setTimeout(r, (wait ? wait * 1000 : 0) || 800 * 2 ** attempt));
+      const wait = retryDelaySeconds(err) ?? 0;
+      // Retry only short, transient failures; long quota windows and timeouts go to the fallback or the UI.
+      if (!(status === 429 || status >= 500) || status === 504 || isDailyQuota(err) || wait > 8) break;
+      if (i < tries - 1) await new Promise((r) => setTimeout(r, wait * 1000 || 800 * 2 ** i));
     }
   }
-  if (statusOf(lastErr) === 429) throw new HttpError(429, "AI_RATE_LIMITED", "The AI is busy. Ink is drying…", { retryAfter: retryDelaySeconds(lastErr) ?? 20 });
-  throw new HttpError(502, "AI_FAILED", "The AI couldn't read this right now. Please try again.");
+  throw new Upstream(model, lastErr);
+}
+
+/**
+ * generateContent with a timeout, a short backoff on 429/5xx, and one fallback model when the
+ * chosen one is overloaded or out of quota. Ends in an error the UI can show calmly.
+ */
+export async function generate(opts: GenOpts) {
+  const primary = opts.model ?? models().main;
+  const fallback = opts.fallback === false ? undefined : models().fallback;
+  const canFallBack = Boolean(fallback && fallback !== primary);
+  let first: Upstream;
+  try {
+    // With a fallback ready, don't spend the time budget retrying an overloaded model.
+    return await attempt(primary, opts, canFallBack ? 1 : 3);
+  } catch (e) {
+    first = e as Upstream;
+  }
+  const busy = (s: number) => s === 429 || s >= 500;
+  let last = first;
+  if (canFallBack && busy(first.status)) {
+    console.warn(`[gemini] falling back ${primary} → ${fallback}`);
+    try {
+      return await attempt(fallback!, { ...opts, note: `${opts.note ?? "ai"} (fallback)` }, 2);
+    } catch (e) {
+      last = e as Upstream;
+    }
+  }
+  if (isDailyQuota(first.err) && (last === first || last.status === 429)) {
+    throw new HttpError(429, "AI_DAILY_LIMIT", "Today's free AI reads are used up. Try a cached sample, or come back tomorrow.");
+  }
+  if (last.status === 429 && !opts.deadline) {
+    throw new HttpError(429, "AI_RATE_LIMITED", "The AI is busy. Ink is drying…", { retryAfter: Math.min(90, retryDelaySeconds(last.err) ?? 20) });
+  }
+  if (busy(last.status)) throw new HttpError(503, "AI_BUSY", "The AI is busy right now. Try again in a minute.");
+  throw new HttpError(502, "AI_FAILED", "The AI couldn't answer right now. Please try again.");
 }
 
 // Gemini's structured output rejects some JSON Schema keywords (found by bisecting a 400:

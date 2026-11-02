@@ -12,10 +12,13 @@ type Props = {
   at?: string;
   orderId: string;
   playKey?: number;
+  /** From PayPal: set once the seller refunds some or all of the order. */
+  refundedMinor?: number;
 };
 
 /** The "Paid" moment: a receipt slides out of the printer slot. */
-export function PaidReceipt({ title, totalMinor, currency, items, at, orderId, playKey = 0 }: Props) {
+export function PaidReceipt({ title, totalMinor, currency, items, at, orderId, playKey = 0, refundedMinor = 0 }: Props) {
+  const fully = refundedMinor >= totalMinor;
   const reduce = useReducedMotion();
   const time = at ? new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
   return (
@@ -33,6 +36,11 @@ export function PaidReceipt({ title, totalMinor, currency, items, at, orderId, p
         >
           <p className="text-center font-sans text-xs tracking-widest text-muted-foreground uppercase">{title}</p>
           <p className="mt-2 text-center font-serif text-4xl text-[#003087] tabular-nums">{formatMoney(totalMinor, currency)}</p>
+          {refundedMinor > 0 ? (
+            <p className="mt-1 text-center font-sans text-xs font-semibold text-[#9a4a00]">
+              {fully ? "Refunded in full" : `Partly refunded ${formatMoney(refundedMinor, currency)}`}
+            </p>
+          ) : null}
           <ul className="mt-3 space-y-0.5 border-t border-dashed pt-3 text-xs">
             {items.map((i) => (
               <li key={i.name} className="flex justify-between gap-2">
@@ -45,7 +53,7 @@ export function PaidReceipt({ title, totalMinor, currency, items, at, orderId, p
             {time ? `${time} · ` : ""}PayPal {orderId}
           </p>
           <div className="absolute top-10 right-3">
-            <Stamp kind="paid" rotate={-12} playKey={playKey} className="bg-white/70 text-xs" />
+            {fully ? null : <Stamp kind="paid" rotate={-12} playKey={playKey} className="bg-white/70 text-xs" />}
           </div>
         </motion.div>
       </div>

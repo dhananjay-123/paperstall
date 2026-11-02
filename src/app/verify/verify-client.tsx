@@ -29,13 +29,16 @@ export function VerifyClient({ initialStall }: { initialStall?: string }) {
   const ledger = useStore((s) => s.ledger);
   const addLedger = useStore((s) => s.addLedger);
   const sound = useStore((s) => s.settings.sound);
-  const [stallId, setStallId] = useState(initialStall ?? stalls[0]?.id ?? "");
+  // Stalls arrive from localStorage after the first render, so derive the choice rather than
+  // freezing it in state: without ?stall= the first stall is picked once it loads.
+  const [picked, setStallId] = useState(initialStall ?? "");
   const [counter, setCounter] = useState(false);
   const [camera, setCamera] = useState(false);
   const [manual, setManual] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
-  const stall = stalls.find((s) => s.id === stallId);
+  const stall = stalls.find((s) => s.id === picked) ?? stalls[0];
+  const stallId = stall?.id ?? "";
   const takings = ledger.filter((l) => l.stallId === stallId && l.at.slice(0, 10) === new Date().toISOString().slice(0, 10)).reduce((n, l) => n + l.totalMinor - (l.refundedMinor ?? 0), 0);
 
   if (!stalls.length) {

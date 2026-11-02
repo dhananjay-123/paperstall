@@ -25,7 +25,12 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/v1/orders/[i
     const o = await getOrder(id, { receipts: book });
     const pu = o.purchase_units[0];
     const cap = pu?.payments?.captures?.[0];
-    return ok({ id: o.id, status: o.status, captureId: cap?.id, captureStatus: cap?.status, amount: pu?.amount, payee: pu?.payee?.email_address, stallId: pu?.custom_id }, book.items);
+    const c = pu?.amount?.currency_code ?? "";
+    // So a buyer's receipt can say "Partly refunded $X" rather than a stale PAID.
+    const refundedMinor = isPayPalCurrency(c)
+      ? (pu?.payments?.refunds ?? []).filter((r) => r.status === "COMPLETED" && r.amount).reduce((n, r) => n + fromPayPalValue(r.amount!.value, c), 0)
+      : 0;
+    return ok({ id: o.id, status: o.status, captureId: cap?.id, captureStatus: cap?.status, amount: pu?.amount, refundedMinor, payee: pu?.payee?.email_address, stallId: pu?.custom_id }, book.items);
   } catch (err) {
     return fail(err, book.items);
   }
@@ -59,7 +64,8 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/v1/orders/[
         { amount: body.amountMinor ? { currency_code: c, value: toPayPalValue(body.amountMinor, c) } : undefined, noteToPayer: body.note },
         { receipts: book, requestId: `refund-${body.captureId}-${body.amountMinor ?? "full"}` },
       );
-      return ok({ refundId: refund.id, status: refund.status, refundedMinor: body.amountMinor ?? captured, currency: c }, book.items);
+      const debugId = book.items.findLast((r) => r.path.includes("/refund"))?.debugId;
+      return ok({ refundId: refund.id, status: refund.status, refundedMinor: body.amountMinor ?? captured, currency: c, debugId }, book.items);
     }
 
     const tracked = await addTracking(

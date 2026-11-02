@@ -5,14 +5,17 @@ import { Loader2, Send, Sparkles } from "lucide-react";
 import { ApprovalCard, type Proposal } from "@/components/approval/approval-card";
 import { Button } from "@/components/ui/button";
 import type { AgentProposal } from "@/core/agent";
-import { formatMoney, isPayPalCurrency, toMinor, type CurrencyCode } from "@/core/money";
+import { exponent, formatMoney, isPayPalCurrency, toMinor, toPayPalValue, type CurrencyCode } from "@/core/money";
 import { peekStall } from "@/core/peek";
 import type { Stall } from "@/core/stall";
 import { api, ApiCallError } from "@/lib/api-client";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-type Msg = { role: "user" | "model"; text: string; proposals?: AgentProposal[] };
+type Built = { card: Proposal; run: (f: Record<string, string>) => Promise<string> };
+// Cards are built once, when Penny replies, and kept with the message: rebuilding them from the
+// ledger after an approval would remount the card and offer the same refund again.
+type Msg = { role: "user" | "model"; text: string; cards?: Built[] };
 
 const EXAMPLES = [
   "Who hasn't paid me this week? Remind them politely.",
@@ -47,6 +50,7 @@ export function Penny({ stall, compact = false }: { stall: Stall; compact?: bool
     setBusy(true);
     setError(null);
     const s = useStore.getState();
+    const priceOf = new Map(stall.payload.i.map((i) => [i.name, i.price]));
     try {
       const res = await api<{ reply: string; proposals: AgentProposal[] }>("/api/v1/ai/penny", {
         body: {
@@ -61,16 +65,23 @@ export function Penny({ stall, compact = false }: { stall: Stall; compact?: bool
                 n,
                 id: l.id,
                 at: l.at,
-                customer: l.customer,
-                items: l.items.map((i) => `${i.quantity}× ${i.name}`).join(", ").slice(0, 300),
+                customer: l.customer?.slice(0, 120),
+                // Unit prices come from the signed stall, so Penny can refund "one horchata" exactly.
+                lines: l.items.slice(0, 40).map((i) => ({ name: i.name.slice(0, 120), quantity: i.quantity, unitMinor: priceOf.get(i.name) })),
                 totalMinor: l.totalMinor,
                 refundedMinor: l.refundedMinor ?? 0,
                 currency: l.currency,
+                captured: Boolean(l.captureId),
               })),
           },
         },
       });
-      setMsgs((m) => [...m, { role: "model", text: res.reply, proposals: res.proposals }]);
+      const ledger = numberedLedger();
+      const built = res.proposals.map((p) => buildProposal(p, stall, ledger));
+      const cards = built.filter((b): b is Built => b !== null);
+      // Penny's sentence may promise a card; if the studio couldn't build one, say so instead.
+      const text = built.length && !cards.length ? "Penny suggested something I can't match to your records, so nothing was proposed." : res.reply;
+      setMsgs((m) => [...m, { role: "model", text, cards }]);
     } catch (e) {
       setError(e instanceof ApiCallError ? e.error.message : "Penny couldn't answer right now.");
     } finally {
@@ -107,7 +118,7 @@ export function Penny({ stall, compact = false }: { stall: Stall; compact?: bool
           {msgs.map((m, i) => (
             <div key={i} className={m.role === "user" ? "flex justify-end" : "space-y-3"}>
               <p className={m.role === "user" ? "max-w-[85%] rounded-2xl rounded-br-sm bg-ink px-3 py-2 text-sm text-paper" : "max-w-[90%] text-sm"}>{m.text}</p>
-              {m.proposals?.map((p) => <ProposalCard key={p.id} p={p} stall={stall} ledger={numberedLedger()} />)}
+              {m.cards?.map((b) => <ApprovalCard key={b.card.id} proposal={b.card} onApprove={b.run} onReject={() => {}} />)}
             </div>
           ))}
           {busy ? (
@@ -147,15 +158,18 @@ export function Penny({ stall, compact = false }: { stall: Stall; compact?: bool
       )}
     </div>
   );
-
-  function ProposalCard({ p, stall: st, ledger }: { p: AgentProposal; stall: Stall; ledger: ReturnType<typeof numberedLedger> }) {
-    const built = buildProposal(p, st, ledger);
-    if (!built) return <p className="text-sm text-warning-ink">Penny suggested something I can&apos;t match to your records, so nothing was proposed.</p>;
-    return <ApprovalCard proposal={built.card} onApprove={built.run} onReject={() => {}} />;
-  }
 }
 
-function buildProposal(p: AgentProposal, stall: Stall, ledger: { n: number; entry: ReturnType<typeof useStore.getState>["ledger"][number] }[]): { card: Proposal; run: (f: Record<string, string>) => Promise<string> } | null {
+/** A typed amount: positive, with at most the currency's decimals. */
+function parseAmount(v: string, cur: CurrencyCode): number | null {
+  const d = exponent(cur);
+  const t = v.trim();
+  if (!(d ? new RegExp(`^\\d+(\\.\\d{1,${d}})?$`) : /^\d+$/).test(t)) return null;
+  const minor = toMinor(Number(t), cur);
+  return minor > 0 ? minor : null;
+}
+
+function buildProposal(p: AgentProposal, stall: Stall, ledger: { n: number; entry: ReturnType<typeof useStore.getState>["ledger"][number] }[]): Built | null {
   const s = useStore.getState();
   const a = p.args as Record<string, unknown>;
   const cur = stall.payload.c as CurrencyCode;
@@ -183,46 +197,63 @@ function buildProposal(p: AgentProposal, stall: Stall, ledger: { n: number; entr
   }
 
   if (p.tool === "refund_capture" || p.tool === "add_tracking") {
-    const ref = String(a.order ?? "").trim();
-    const row = ledger.find((l) => l.entry.id === ref || String(l.n) === ref.replace(/^#/, ""));
+    // The server pinned the order (and the refund amount) to the ledger; the studio checks both again.
+    const row = ledger.find((l) => l.entry.id === a.orderId);
     const l = row?.entry;
-    if (!l?.captureId) return null;
+    if (!row || !l?.captureId) return null;
     const lc = (isPayPalCurrency(l.currency) ? l.currency : cur) as CurrencyCode;
     if (p.tool === "refund_capture") {
       const remaining = l.totalMinor - (l.refundedMinor ?? 0);
-      const n = row?.n ?? 0;
-      const asked =
-        typeof a.fraction === "number"
-          ? Math.min(remaining, Math.round(l.totalMinor * a.fraction))
-          : typeof a.amount === "number"
-            ? Math.min(remaining, toMinor(a.amount, lc))
-            : remaining;
+      const asked = typeof a.amountMinor === "number" ? a.amountMinor : NaN;
+      if (!(asked > 0) || asked > remaining) return null;
+      const captureId = l.captureId;
+      const endpoint = (minor: number) => `POST /v2/payments/captures/${captureId}/refund · ${toPayPalValue(minor, lc)} ${lc}`;
+      const left = () => {
+        const now = useStore.getState().ledger.find((x) => x.id === l.id) ?? l;
+        return now.totalMinor - (now.refundedMinor ?? 0);
+      };
       return {
         card: {
           id: p.id,
-          title: `Refund ${formatMoney(asked, lc)} on order ${n}`,
+          title: `Refund ${formatMoney(asked, lc)} on order ${row.n}`,
           what: `${a.reason ? `Reason: ${String(a.reason)}. ` : ""}PayPal returns the money to the buyer.`,
           amount: formatMoney(asked, lc),
           recipient: l.customer ?? "the buyer",
-          endpoint: `POST /v2/payments/captures/${l.captureId}/refund`,
-          fields: [{ key: "amount", label: `Amount (${lc})`, value: String(asked / 10 ** (lc === "JPY" || lc === "HUF" || lc === "TWD" ? 0 : 2)), type: "number" }],
+          endpoint: endpoint(asked),
+          fields: [
+            {
+              key: "amount",
+              label: `Amount (${lc}), up to ${formatMoney(remaining, lc)}`,
+              value: toPayPalValue(asked, lc),
+              inputMode: "decimal",
+              validate: (v) => {
+                const minor = parseAmount(v, lc);
+                if (minor === null) return exponent(lc) ? `Enter an amount like ${toPayPalValue(asked, lc)}, with at most ${exponent(lc)} decimals.` : "Enter a whole amount.";
+                return minor > remaining ? `Only ${formatMoney(remaining, lc)} is left to refund.` : null;
+              },
+            },
+          ],
+          preview: (f) => {
+            const minor = parseAmount(f.amount ?? "", lc);
+            return minor === null ? {} : { title: `Refund ${formatMoney(minor, lc)} on order ${row.n}`, amount: formatMoney(minor, lc), endpoint: endpoint(minor) };
+          },
         },
         run: async (f) => {
-          const minor = toMinor(Number(f.amount), lc);
-          if (!(minor > 0) || minor > remaining) throw new Error("Enter an amount up to what's left to refund.");
-          const res = await api<{ refundId: string; status: string; refundedMinor: number }>(`/api/v1/orders/${l.id}`, {
+          const minor = parseAmount(f.amount ?? "", lc);
+          if (minor === null || minor > left()) throw new Error("Enter an amount up to what's left to refund.");
+          const res = await api<{ refundId: string; status: string; refundedMinor: number; debugId?: string }>(`/api/v1/orders/${l.id}`, {
             body: { action: "refund", stallId: stall.id, owner: stall.owner, captureId: l.captureId, amountMinor: minor === l.totalMinor ? undefined : minor, note: a.reason ? String(a.reason).slice(0, 255) : undefined },
           });
           const total = (l.refundedMinor ?? 0) + res.refundedMinor;
           s.patchLedger(l.id, { refundedMinor: total, status: total >= l.totalMinor ? "REFUNDED" : "PARTIALLY_REFUNDED" });
-          return `Refunded ${formatMoney(res.refundedMinor, lc)} (refund ${res.refundId}).`;
+          return `Refunded ${formatMoney(res.refundedMinor, lc)} · refund ${res.refundId}${res.debugId ? ` · debug_id ${res.debugId}` : ""}`;
         },
       };
     }
     return {
       card: {
         id: p.id,
-        title: `Mark order ${row?.n ?? ""} shipped`,
+        title: `Mark order ${row.n} shipped`,
         what: `Adds ${String(a.carrier)} tracking ${String(a.trackingNumber)} and notifies the buyer.`,
         recipient: l.customer ?? "the buyer",
         endpoint: `POST /v2/checkout/orders/${l.id}/track`,

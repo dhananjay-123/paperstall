@@ -43,7 +43,8 @@ export async function POST(req: NextRequest) {
       jsonSchema: z.toJSONSchema(Proposal),
       config: { systemInstruction: SYSTEM, temperature: 0.2 },
       contents: [{ role: "user", parts: [{ text: `Menu: ${JSON.stringify(menu)}\nBuyer: ${ask}` }] }],
-      timeoutMs: 20_000,
+      timeoutMs: 12_000,
+      deadline: Date.now() + 12_000,
     });
     // Schema-constrained, then re-checked: drop anything not on this stall.
     const ids = new Set(stall.i.map((i) => i.id));

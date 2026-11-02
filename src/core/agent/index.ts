@@ -2,6 +2,7 @@
 // return a proposal; only an explicit seller approval (in the UI) executes them.
 
 import { z } from "zod";
+import { formatMoney, isPayPalCurrency, toMinor } from "@/core/money";
 
 export type ToolEffect = "read" | "mutate";
 
@@ -9,6 +10,11 @@ export const TOOLS = {
   list_unpaid_invoices: { effect: "read", description: "List this seller's invoices that are not paid yet.", args: z.object({}) },
   get_invoice: { effect: "read", description: "Get the live PayPal status of one invoice.", args: z.object({ invoiceId: z.string().max(40) }) },
   get_order: { effect: "read", description: "Get the live PayPal status of one order (also used to check a payment).", args: z.object({ orderId: z.string().max(40) }) },
+  list_orders: {
+    effect: "read",
+    description: "List recent ledger orders, newest first, with their number, PayPal order id, line items (name, quantity, unit price) and what's still refundable.",
+    args: z.object({ limit: z.number().int().min(1).max(20).optional() }),
+  },
   sales_summary: {
     effect: "read",
     description: "Sum verified sales from the local ledger for a period.",
@@ -28,9 +34,10 @@ export const TOOLS = {
   refund_capture: {
     effect: "mutate",
     description:
-      "Propose a refund of a ledger order. order = the ledger number (\"3\") or PayPal order id. Use fraction for parts (half = 0.5) or amount in the order currency; omit both for a full refund.",
+      "Propose a refund of a ledger order. order = the ledger number (\"3\"), \"last\" or the PayPal order id. For named items (\"one horchata\") pass items: the refund is the sum of those lines. Use amount only for a money amount the seller states (it wins), fraction for parts (half = 0.5); omit all three for a full refund.",
     args: z.object({
       order: z.string().max(40),
+      items: z.array(z.object({ name: z.string().max(120), quantity: z.number().int().min(1).max(999).optional() })).max(30).optional(),
       fraction: z.number().gt(0).max(1).optional(),
       amount: z.number().positive().optional(),
       reason: z.string().max(200).optional(),
@@ -38,7 +45,7 @@ export const TOOLS = {
   },
   add_tracking: {
     effect: "mutate",
-    description: "Propose adding shipment tracking to a ledger order. order = the ledger number or PayPal order id.",
+    description: "Propose adding shipment tracking to a ledger order. order = the ledger number (\"3\"), \"last\" or the PayPal order id.",
     args: z.object({ order: z.string().max(40), trackingNumber: z.string().min(3).max(64), carrier: z.string().min(2).max(64) }),
   },
   create_invoice_from_text: {
@@ -94,6 +101,72 @@ export async function runTool(name: string, rawArgs: unknown, readers: ReadExecu
 }
 
 export const MAX_TOOL_STEPS = 5;
+
+/** A ledger order as the studio sends it to Penny. n is the seller's "order 3". */
+export type PennyOrder = {
+  n: number;
+  id: string;
+  at: string;
+  customer?: string;
+  lines: { name: string; quantity: number; unitMinor?: number }[];
+  totalMinor: number;
+  refundedMinor: number;
+  currency: string;
+  captured: boolean;
+};
+
+/** "last", "the latest order", "#3", "order 3", "3" or a PayPal order id → the ledger order. */
+export function findOrder(ref: string, orders: PennyOrder[]): PennyOrder | undefined {
+  const r = ref.trim().toLowerCase();
+  if (!orders.length) return undefined;
+  if (/^(the )?(last|latest|most recent|newest)( order)?$/.test(r)) return orders.reduce((a, b) => (b.n > a.n ? b : a));
+  const n = /^(?:order\s*)?#?\s*(\d{1,6})$/.exec(r);
+  if (n) return orders.find((o) => o.n === Number(n[1]));
+  return orders.find((o) => o.id.toLowerCase() === r);
+}
+
+const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
+/**
+ * Pins a refund or tracking proposal to a real order before the seller sees it, and works out a
+ * refund from named items. Penny's words are never trusted for which order or how much.
+ */
+export function resolveOrderProposal(p: AgentProposal, orders: PennyOrder[]): { ok: true; proposal: AgentProposal } | { ok: false; message: string } {
+  if (p.tool !== "refund_capture" && p.tool !== "add_tracking") return { ok: true, proposal: p };
+  const a = p.args as Partial<ToolArgs<"refund_capture">>;
+  const last = orders.length ? Math.max(...orders.map((o) => o.n)) : 0;
+  const o = findOrder(String(a.order ?? ""), orders);
+  if (!o) {
+    return { ok: false, message: last ? `There is no order "${a.order}". Orders are numbered 1–${last}; the last order is ${last}. Use list_orders.` : "There are no orders in the ledger yet." };
+  }
+  if (!o.captured) return { ok: false, message: `Order ${o.n} has no PayPal capture, so it can't be refunded or shipped.` };
+  const pinned = { orderId: o.id, n: o.n };
+  if (p.tool === "add_tracking") return { ok: true, proposal: { ...p, args: { ...p.args, ...pinned } } };
+
+  const cur = isPayPalCurrency(o.currency) ? o.currency : "USD";
+  const remaining = o.totalMinor - o.refundedMinor;
+  if (remaining <= 0) return { ok: false, message: `Order ${o.n} is already fully refunded.` };
+  let amountMinor: number;
+  if (typeof a.amount === "number") {
+    amountMinor = toMinor(a.amount, cur);
+  } else if (a.items?.length) {
+    amountMinor = 0;
+    for (const want of a.items) {
+      const w = norm(want.name);
+      const line = o.lines.find((l) => norm(l.name) === w) ?? o.lines.find((l) => norm(l.name).includes(w) || w.includes(norm(l.name)));
+      if (!line) return { ok: false, message: `Order ${o.n} has no "${want.name}". It has ${o.lines.map((l) => `${l.quantity}× ${l.name}`).join(", ")}.` };
+      if (line.unitMinor === undefined) return { ok: false, message: `The price of ${line.name} on order ${o.n} isn't known; ask the seller for an amount.` };
+      amountMinor += line.unitMinor * Math.min(want.quantity ?? 1, line.quantity);
+    }
+  } else if (typeof a.fraction === "number") {
+    amountMinor = Math.min(remaining, Math.round(o.totalMinor * a.fraction));
+  } else {
+    amountMinor = remaining;
+  }
+  if (!(amountMinor > 0)) return { ok: false, message: "The refund must be more than zero." };
+  if (amountMinor > remaining) return { ok: false, message: `Order ${o.n} has only ${formatMoney(remaining, cur)} left to refund.` };
+  return { ok: true, proposal: { ...p, args: { ...p.args, ...pinned, amountMinor } } };
+}
 
 /** Function declarations for Gemini, from the zod schemas. */
 export function functionDeclarations() {

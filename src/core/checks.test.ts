@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bestMatch, matchConfidence, priceGuard, type C3Product } from "./market";
+import { bestMatch, isAccessoryListing, matchConfidence, priceGuard, type C3Product, type MarketOffer } from "./market";
 import { mathCheck, sanityFlags, taxRateBp } from "./read/checks";
 import type { Read } from "./read/schema";
 
@@ -95,14 +95,45 @@ describe("market match", () => {
   });
 });
 
+describe("accessory listings", () => {
+  it("keeps cases, skins and 'for AirPods' listings out of an AirPods match", () => {
+    expect(isAccessoryListing("AirPods Pro 2", "Apex Case for AirPods Pro 2, Shockproof")).toBe(true);
+    expect(isAccessoryListing("AirPods Pro 2", "Silicone Cover Compatible with AirPods Pro 2nd Gen")).toBe(true);
+    expect(isAccessoryListing("AirPods Pro 2", "Ear Tips for AirPods Pro 2")).toBe(true);
+    expect(isAccessoryListing("AirPods Pro 2", "Apple AirPods Pro 2 Wireless Earbuds with MagSafe Charging Case (USB-C)")).toBe(false);
+    expect(isAccessoryListing("AirPods Pro 2 case", "Apex Case for AirPods Pro 2")).toBe(false);
+  });
+
+  it("matches the real product even when knock-offs are cheaper", () => {
+    const at = (p: C3Product, store: string): C3Product => ({ ...p, offers: p.offers?.map((o) => ({ ...o, url: `https://${store}/p`, domain: store })) });
+    const real = [at(product("Apple AirPods Pro 2 with MagSafe Charging Case", "Apple", [199]), "a.example"), at(product("AirPods Pro 2", "Apple", [229]), "b.example")];
+    const fakes = [at(product("Apex Case for AirPods Pro 2", "Apex", [23.95]), "c.example"), at(product("Case Compatible with AirPods Pro 2", "Generic", [29.99]), "d.example")];
+    expect(bestMatch("AirPods Pro 2", [...fakes, ...real], "USD")).toMatchObject({ min: 199, max: 229 });
+  });
+});
+
 describe("priceGuard", () => {
   const fmt = (n: number) => `$${n.toFixed(2)}`;
-  const airpods = { title: "Apple AirPods (3rd generation)", min: 129, max: 179, median: 169 };
+  const offers = (prices: number[]): MarketOffer[] => prices.map((price, i) => ({ retailer: `s${i}.example`, price, url: `https://s${i}.example/p`, inStock: true }));
+  const airpods = { title: "Apple AirPods (3rd generation)", min: 129, max: 179, median: 169, confidence: 1, offers: offers([129, 169, 179]) };
   it("suggests a decimal-shift fix for a typo", () => {
     expect(priceGuard(16.9, airpods, fmt)).toMatchObject({ kind: "too_low", fix: 169 });
   });
   it("falls back to the median when no shift fits", () => {
     expect(priceGuard(3.5, airpods, fmt)).toMatchObject({ kind: "too_low", fix: 169, message: "$3.50 for Apple AirPods? Did you mean $169.00?" });
+  });
+  it("names the seller's own item, not the store's listing", () => {
+    expect(priceGuard(16.9, airpods, fmt, "AirPods 3")?.message).toBe("$16.90 for AirPods 3? Did you mean $169.00?");
+  });
+  it("stays quiet on a weak match or when fewer than three stores agree", () => {
+    expect(priceGuard(16.9, { ...airpods, confidence: 0.8 }, fmt)).toBeNull();
+    expect(priceGuard(16.9, { ...airpods, offers: offers([129, 179]) }, fmt)).toBeNull();
+  });
+  it("never calls a real retail price a slip because cheap listings matched", () => {
+    // $199 AirPods Pro 2 against $23.95–$29.99 listings: must not suggest $19.90.
+    const cheap = { title: "Apex Case", min: 23.95, max: 29.99, median: 26, confidence: 1, offers: offers([23.95, 26, 29.99]) };
+    expect(priceGuard(199, cheap, fmt, "AirPods Pro 2")).toBeNull();
+    expect(priceGuard(2600, cheap, fmt, "Widget")).toMatchObject({ kind: "too_high", fix: 26 });
   });
   it("stays quiet inside 25%–300% of the market", () => {
     expect(priceGuard(150, airpods, fmt)).toBeNull();

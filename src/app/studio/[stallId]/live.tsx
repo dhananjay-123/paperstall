@@ -145,6 +145,7 @@ function Stat({ icon, value, label }: { icon: React.ReactNode; value: string; la
 
 function OrderCard({ order, highlight, onHanded }: { order: LedgerEntry; highlight: boolean; onHanded: () => void }) {
   const reduce = useReducedMotion();
+  const refunded = order.refundedMinor ?? 0;
   return (
     <motion.li
       layout={!reduce}
@@ -156,9 +157,15 @@ function OrderCard({ order, highlight, onHanded }: { order: LedgerEntry; highlig
     >
       {highlight ? <InkCircle box={[0, 0, 1000, 1000]} seed={7} color="var(--highlight)" blend={false} strokeWidth={2.4} /> : null}
       <div className="flex items-center justify-between gap-2 text-sm">
-        <span className="flex items-center gap-1.5 font-semibold text-success-ink">
-          <CircleCheck className="size-4" /> Paid via PayPal
-        </span>
+        {refunded ? (
+          <span className="flex items-center gap-1.5 font-semibold text-warning-ink">
+            <Undo2 className="size-4" /> {refunded >= order.totalMinor ? "Refunded" : `Partly refunded ${formatMoney(refunded, order.currency)}`}
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5 font-semibold text-success-ink">
+            <CircleCheck className="size-4" /> Paid via PayPal
+          </span>
+        )}
         <span className="text-muted-foreground tabular-nums">{clock(order.at)}</span>
       </div>
       <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2 sm:grid-cols-[auto_minmax(0,1fr)_auto]">

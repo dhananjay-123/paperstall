@@ -47,3 +47,5 @@ docs/DEMO.md
 AGENTS.md
 CLAUDE.md
 .claude/
+# hand-off prompts (e.g. 05-DEMO-FIXES-PROMPT.md), if copied into the repo
+*-PROMPT.md

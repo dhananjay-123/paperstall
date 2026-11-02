@@ -52,6 +52,22 @@ export function matchConfidence(query: string, p: C3Product): number {
   return Math.min(1, hits / q.length + (brandHit ? 0.1 : 0));
 }
 
+// Words that make a listing a thing *for* the product (a case, a skin, a knock-off), not the product.
+const ACCESSORY_WORDS = /\b(compatible|replacement|cover|covers|skin|skins|sleeve|protector|protective|silicone|strap|holder|keychain|ear ?tips|decal|sticker|dummy|replica|clone|accessor(?:y|ies))\b/;
+const ACCESSORY_FOR = /\b(case|cases|charger|cable|stand|mount|dock|adapter)\s+(for|compatible)\b/;
+
+/** "Apex Case for AirPods Pro 2" is not AirPods Pro 2, unless the seller is selling cases. */
+export function isAccessoryListing(query: string, title: string): boolean {
+  const q = query.toLowerCase();
+  const t = title.toLowerCase();
+  // The seller is selling the accessory itself: accessory listings are the market.
+  if (ACCESSORY_WORDS.test(q) || /\b(case|cases|charger|cable|stand|mount|dock|adapter)\b/.test(q) || /\bfor\b/.test(q)) return false;
+  if (ACCESSORY_WORDS.test(t) || ACCESSORY_FOR.test(t)) return true;
+  // "... for AirPods": a product for one of the words the seller wrote.
+  const forWhat = /\bfor\s+(?:apple\s+|the\s+|new\s+)?([\p{L}\p{N}]+)/u.exec(t)?.[1];
+  return Boolean(forWhat && tokens(query).includes(forWhat));
+}
+
 function median(xs: number[]) {
   const s = [...xs].sort((a, b) => a - b);
   const m = Math.floor(s.length / 2);
@@ -66,6 +82,7 @@ export function bestMatch(query: string, products: C3Product[], currency: string
   // entries that match as well as the best one. A near miss ("AirPods Max 2" for "AirPods
   // Pro 2" scores 0.85) is a different product and stays out.
   const scored = products
+    .filter((p) => !isAccessoryListing(query, p.title))
     .map((p) => ({ p, c: matchConfidence(query, p) }))
     .filter((m) => m.c >= MIN_CONFIDENCE)
     .sort((a, b) => b.c - a.c);
@@ -119,16 +136,35 @@ export function isHttps(url: unknown): url is string {
 
 export type PriceGuard = { kind: "too_low" | "too_high"; message: string; fix: number } | null;
 
-/** Typo-style warning when the written price is far outside the market. */
-export function priceGuard(written: number, m: Pick<MarketMatch, "median" | "min" | "max" | "title">, fmt: (n: number) => string): PriceGuard {
-  if (!(written > 0)) return null;
+/** The guard calls a written price a slip, so it needs a closer match than the range shown beside it. */
+export const GUARD_CONFIDENCE = 0.85;
+const GUARD_STORES = 3;
+
+/**
+ * Typo-style warning when the written price is far outside the market. It speaks only when the
+ * match is strong and at least three stores agree on the price, and names the seller's own item.
+ */
+export function priceGuard(
+  written: number,
+  m: Pick<MarketMatch, "median" | "min" | "max" | "title" | "confidence" | "offers">,
+  fmt: (n: number) => string,
+  itemName?: string,
+): PriceGuard {
+  if (!(written > 0) || m.confidence < GUARD_CONFIDENCE) return null;
+  const agree = m.offers.filter((o) => o.price >= m.median * 0.6 && o.price <= m.median * 1.6).length;
+  if (agree < GUARD_STORES) return null;
   const ratio = written / m.median;
   if (ratio >= 0.25 && ratio <= 3) return null;
   // Most handwriting slips are a shifted decimal: try ×10/×100 or ÷10/÷100 first.
-  const shifts = ratio < 0.25 ? [10, 100] : [0.1, 0.01];
-  const shifted = shifts.map((f) => Math.round(written * f * 100) / 100).find((v) => v >= m.min * 0.8 && v <= m.max * 1.2);
+  const tooHigh = ratio > 3;
+  const shifts = tooHigh ? [0.1, 0.01] : [10, 100];
+  // A high price may just be the real thing next to cheaper listings, so only a shift that lands
+  // squarely inside the market counts as a slip; never fall back to "did you mean the median?".
+  const [lo, hi] = tooHigh ? [m.min * 0.9, m.max * 1.1] : [m.min * 0.8, m.max * 1.2];
+  const shifted = shifts.map((f) => Math.round(written * f * 100) / 100).find((v) => v >= lo && v <= hi);
+  if (tooHigh && shifted === undefined) return null;
   const fix = shifted ?? Math.round(m.median * 100) / 100;
-  const short = m.title.split(/[,(|-]/)[0].trim().slice(0, 40);
+  const short = (itemName?.trim() || m.title.split(/[,(|-]/)[0].trim()).slice(0, 40);
   return {
     kind: ratio < 0.25 ? "too_low" : "too_high",
     message: `${fmt(written)} for ${short}? Did you mean ${fmt(fix)}?`,

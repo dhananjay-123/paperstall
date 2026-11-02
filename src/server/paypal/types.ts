@@ -25,7 +25,7 @@ export type Order = {
     amount: Money & { breakdown?: { item_total?: Money } };
     payee?: { email_address?: string; merchant_id?: string };
     items?: { name: string; quantity: string; unit_amount: Money; description?: string }[];
-    payments?: { captures?: Capture[] };
+    payments?: { captures?: Capture[]; refunds?: { id: string; status: string; amount?: Money }[] };
   }[];
   links?: { href: string; rel: string; method?: string }[];
 };
