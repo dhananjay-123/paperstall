@@ -64,6 +64,17 @@ describe("market match", () => {
     expect(bestMatch("Anker 10000mAh power bank", [product("Anker 10000mAh Power Bank", "Anker", [29])], "USD")).toBeNull();
     expect(bestMatch("Anker 10000mAh power bank", [product("Anker 10000mAh Power Bank", "Anker", [29, 30])], "EUR")).toBeNull();
   });
+
+  it("pools single-store listings of the same product, but never other models", () => {
+    // product() names every first offer s0.example, so give each listing its own store.
+    const at = (p: C3Product, store: string): C3Product => ({ ...p, offers: p.offers?.map((o) => ({ ...o, url: `https://${store}/p`, domain: store })) });
+    const a = at(product("Apple AirPods Pro 2 with ANC", "Apple", [309.99]), "hsn.example");
+    const b = at(product("AirPods Pro 2 MagSafe", "Apple", [212.99]), "bestbuy.example");
+    const other = at(product("AirPods Pro 3", "Apple", [199.99]), "costco.example");
+    const nearMiss = at(product("AirPods Max 2", "Apple", [769.99]), "samsclub.example");
+    const m = bestMatch("Apple AirPods Pro 2", [a, b, other, nearMiss], "USD");
+    expect(m).toMatchObject({ min: 212.99, max: 309.99, stores: 2 });
+  });
 });
 
 describe("priceGuard", () => {

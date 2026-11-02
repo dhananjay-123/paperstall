@@ -59,17 +59,24 @@ function median(xs: number[]) {
 }
 
 export const MIN_CONFIDENCE = 0.75;
+const POOL_SLACK = 0.05;
 
 export function bestMatch(query: string, products: C3Product[], currency: string, now = new Date()): MarketMatch | null {
-  let best: { p: C3Product; c: number } | null = null;
-  for (const p of products) {
-    const c = matchConfidence(query, p);
-    if (!best || c > best.c) best = { p, c };
-  }
-  if (!best || best.c < MIN_CONFIDENCE) return null;
-  const offers = (best.p.offers ?? []).filter(
-    (o) => o.price?.currency?.toUpperCase() === currency.toUpperCase() && o.price.price > 0 && (o.condition ?? "new") === "new",
-  );
+  // Channel3 often lists one product as several entries with one store each, so pool the
+  // entries that match as well as the best one. A near miss ("AirPods Max 2" for "AirPods
+  // Pro 2" scores 0.85) is a different product and stays out.
+  const scored = products
+    .map((p) => ({ p, c: matchConfidence(query, p) }))
+    .filter((m) => m.c >= MIN_CONFIDENCE)
+    .sort((a, b) => b.c - a.c);
+  const best = scored[0];
+  if (!best) return null;
+  const matched = scored.filter((m) => m.c >= best.c - POOL_SLACK);
+  const seen = new Set<string>();
+  const offers = matched
+    .flatMap((m) => m.p.offers ?? [])
+    .filter((o) => o.price?.currency?.toUpperCase() === currency.toUpperCase() && o.price.price > 0 && (o.condition ?? "new") === "new")
+    .filter((o) => !seen.has(o.url) && !!seen.add(o.url));
   const inStock = offers.filter((o) => o.availability === "InStock");
   const pool = inStock.length >= 2 ? inStock : offers;
   if (pool.length < 2) return null; // one listing isn't a market
@@ -91,6 +98,7 @@ export function bestMatch(query: string, products: C3Product[], currency: string
     stores: new Set(pool.map((o) => o.domain)).size,
     offers: [...pool]
       .sort((a, b) => a.price.price - b.price.price)
+      .filter((o, i, all) => all.findIndex((x) => x.domain === o.domain) === i) // cheapest per store
       .slice(0, 5)
       .map((o) => ({ retailer: o.domain, price: o.price.price, url: o.url, inStock: o.availability === "InStock" })),
     // Small sellers compete on convenience, not shipping: a touch under the median.
