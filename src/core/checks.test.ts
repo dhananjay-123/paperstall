@@ -47,6 +47,9 @@ describe("tax", () => {
     expect(Math.round((2121 * bp) / 10_000)).toBe(149);
     expect(taxRateBp(receipt, "USD")).toBe(0);
   });
+  it("prefers a rate stated on a menu", () => {
+    expect(taxRateBp({ ...base, intent: "shop", items: [item("a", "Latte", 4.5)], taxRate: 8.25 }, "USD")).toBe(825);
+  });
 });
 
 describe("sanityFlags", () => {

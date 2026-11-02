@@ -23,8 +23,12 @@ export function taxMinorOf(read: Read, currency: CurrencyCode): number {
   return read.tax && read.tax > 0 ? toMinor(read.tax, currency) : 0;
 }
 
-/** The paper's tax as a rate on its subtotal, in basis points, so it can be applied to any cart. */
+/**
+ * The tax rate in basis points, applied to every cart. A stated rate wins (menus); otherwise the
+ * paper's tax amount over its subtotal (bills and receipts).
+ */
 export function taxRateBp(read: Read, currency: CurrencyCode): number {
+  if (read.taxRate && read.taxRate > 0) return Math.min(5000, Math.round(read.taxRate * 100));
   const items = computedTotalMinor(read, currency);
   const tax = taxMinorOf(read, currency);
   return items > 0 && tax > 0 ? Math.min(5000, Math.round((tax / items) * 10_000)) : 0;

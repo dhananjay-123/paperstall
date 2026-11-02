@@ -17,7 +17,8 @@ Rules:
   For subscriptions, interval = week/month/year.
 - box: tight [ymin, xmin, ymax, xmax] around the item's line on the page, each 0–1000.
 - Lines with no price, or offers like "first lesson free", are not items: mention them in taxOrNotes.
-- Tax lines (Tax, Sales tax, VAT, GST, IVA…) are NOT items: put the written tax amount in tax. Subtotal and total
+- Tax lines (Tax, Sales tax, VAT, GST, IVA…) are NOT items: put the written tax amount in tax, and a stated
+  rate ("+ 8% tax") in taxRate as a percent. Subtotal and total
   lines are not items either.
 - writtenTotal: only if a total is written on the paper, exactly as written (do NOT recompute it).
   writtenTotalBox: where that total is.

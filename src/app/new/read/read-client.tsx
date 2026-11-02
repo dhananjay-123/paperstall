@@ -442,31 +442,58 @@ function ReadEditor({ draft, onContinue }: { draft: DraftRead; onContinue: (inte
 
       {currency ? (
         <section aria-label="Totals" className="rounded-xl border bg-card p-4 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Subtotal</span>
-            <span className="tabular-nums">{formatMoney(computedTotalMinor(read, currency), currency)}</span>
-          </div>
-          <div className="mt-1 flex items-center justify-between gap-2">
-            <label htmlFor="read-tax" className="text-muted-foreground">
-              Tax
-              {taxRateBp(read, currency) > 0 ? <span className="ml-1 text-xs">({(taxRateBp(read, currency) / 100).toFixed(2)}%, applied to every order)</span> : null}
-            </label>
-            <input
-              id="read-tax"
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="0"
-              value={read.tax ?? ""}
-              placeholder="0.00"
-              onChange={(e) => update({ tax: e.target.value === "" ? undefined : Math.max(0, Number(e.target.value)) })}
-              className="w-24 rounded-md border bg-background px-2 py-1 text-right tabular-nums"
-            />
-          </div>
-          <div className="mt-2 flex items-center justify-between border-t pt-2">
-            <span>Total (computed)</span>
-            <span className="font-medium tabular-nums">{formatMoney(computedTotalMinor(read, currency) + taxMinorOf(read, currency), currency)}</span>
-          </div>
+          {intent === "invoice" || math ? (
+            // A bill: one real total, with the tax amount as written.
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="tabular-nums">{formatMoney(computedTotalMinor(read, currency), currency)}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <label htmlFor="read-tax" className="text-muted-foreground">
+                  Tax
+                  {intent === "shop" && taxRateBp(read, currency) > 0 ? <span className="ml-1 text-xs">({(taxRateBp(read, currency) / 100).toFixed(2)}%, applied to every order)</span> : null}
+                </label>
+                <input
+                  id="read-tax"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  value={read.tax ?? ""}
+                  placeholder="0.00"
+                  onChange={(e) => update({ tax: e.target.value === "" ? undefined : Math.max(0, Number(e.target.value)) })}
+                  className="w-24 rounded-md border bg-background px-2 py-1 text-right tabular-nums"
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between border-t pt-2">
+                <span>Total (computed)</span>
+                <span className="font-medium tabular-nums">{formatMoney(computedTotalMinor(read, currency) + taxMinorOf(read, currency), currency)}</span>
+              </div>
+            </>
+          ) : intent === "shop" ? (
+            // A menu has no total: each customer builds their own cart, so tax is a rate applied at checkout.
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="read-tax-rate" className="text-muted-foreground">
+                Sales tax <span className="text-xs">(added to each customer&apos;s order)</span>
+              </label>
+              <span className="flex items-center gap-1">
+                <input
+                  id="read-tax-rate"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  max="50"
+                  value={read.taxRate ?? ""}
+                  placeholder="0"
+                  onChange={(e) => update({ taxRate: e.target.value === "" ? undefined : Math.min(50, Math.max(0, Number(e.target.value))) })}
+                  className="w-20 rounded-md border bg-background px-2 py-1 text-right tabular-nums"
+                />
+                <span className="text-muted-foreground">%</span>
+              </span>
+            </div>
+          ) : null}
           {math && !math.ok ? (
             <p className="mt-2 text-warning-ink">
               The paper says <span className="underline decoration-danger decoration-wavy">{formatMoney(math.written, currency)}</span>, but the lines{taxMinorOf(read, currency) > 0 ? " and tax" : ""} add up to{" "}
