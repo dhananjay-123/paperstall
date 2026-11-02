@@ -58,3 +58,16 @@ export function verifyReceipt(code: string, secret: string): { ok: true; orderId
   if (!/^[A-Z0-9]{5,40}$/.test(orderId) || !/^[0-9a-f-]{36}$/.test(stallId)) return { ok: false };
   return same(sig, mac(secret, "receipt", `${orderId}~${stallId}`)) ? { ok: true, orderId, stallId } : { ok: false };
 }
+
+// Owner tokens: proof that this device created a stall or invoice. The server mints one when it
+// assigns the ID and only the creator receives it, so knowing a public ID (from a stall link,
+// an invoice page or a receipt) isn't enough to refund, ship, remind or cancel.
+export type OwnedKind = "stall" | "invoice";
+
+export function ownerToken(kind: OwnedKind, id: string, secret: string): string {
+  return mac(secret, `${kind}-owner`, id);
+}
+
+export function verifyOwner(kind: OwnedKind, id: string, token: unknown, secret: string): boolean {
+  return typeof token === "string" && same(token, ownerToken(kind, id, secret));
+}

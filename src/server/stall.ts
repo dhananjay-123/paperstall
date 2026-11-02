@@ -1,5 +1,5 @@
 import "server-only";
-import { verifyStall } from "@/core/signing";
+import { verifyOwner, verifyStall, type OwnedKind } from "@/core/signing";
 import type { StallPayload } from "@/core/stall";
 import { requireEnv } from "@/lib/env";
 import { HttpError } from "@/server/http";
@@ -18,4 +18,11 @@ export function trustedStall(signed: string): StallPayload {
   const v = verifyStall(signed, signingSecret());
   if (!v.ok) throw new HttpError(400, `STALL_${v.reason.toUpperCase()}`, REASONS[v.reason]);
   return v.payload;
+}
+
+/** Refunds, shipping and invoice actions need the owner token the creator got back. */
+export function assertOwner(kind: OwnedKind, id: string, token: unknown) {
+  if (!verifyOwner(kind, id, token, signingSecret())) {
+    throw new HttpError(403, "NOT_OWNER", kind === "stall" ? "Only the device that published this stall can do that. Publish it again on this device." : "Only the device that sent this invoice can do that.");
+  }
 }

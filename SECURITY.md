@@ -14,6 +14,7 @@ Paperstall handles payments, so it is built like a payments product. This file d
 - `PayPal-Request-Id` on every POST; deterministic ids for capture and refund.
 - **Verify-to-record:** a sale enters the ledger only after `GET /v2/checkout/orders/{id}` passes `verifyOrder`: completed order and capture, payee = stall payee, every line priced as on the stall, totals equal, currency equal, right stall, not already recorded (order id or capture id). Receipt QRs are HMAC-signed; forged or other-stall receipts are rejected. Every fail reason is unit-tested.
 - **Live counter:** a doorbell message is only a nudge. Each order is re-checked with PayPal by the seller's device before it shows or counts, so forged messages create nothing. The topic is a random secret, sealed (AES-256-GCM, key derived from the signing secret) inside the signed link, and never accepted from the client at signing. A 4-character HMAC pickup code on the receipt and the counter card stops someone claiming another buyer's order. One tab per stall records (Web Locks), and devices share counted order IDs on the topic.
+- **Owner tokens:** the server assigns every stall ID at publish and returns an owner token (HMAC of the ID) once, to the publishing device only; invoices get one when they're sent. Refund and ship need the stall's token, and the order must carry that stall ID with the capture inside that order. Remind and cancel need the invoice's token. Order, invoice and stall IDs are public (receipts, share pages, links), so knowing an ID is never enough to act on it (ADR-013, unit-tested).
 - Refunds are capped at the captured amount on the server. Invoices are only sent if PayPal's computed total equals ours.
 
 ## AI safety
@@ -22,7 +23,7 @@ Paperstall handles payments, so it is built like a payments product. This file d
 - The concierge can only return items from the signed stall; the server drops anything else.
 
 ## Input limits
-Image type sniffed by magic bytes (JPEG/PNG/WebP), ≤4 MB after client downscaling to ≤1600 px; request size caps on every route; text length caps in every schema; signed stall length cap.
+Third-party URLs (Channel3 offers and photos, item photos in signed stalls) must be `https:`; anything else is dropped or refused before it reaches an `href` or `src`. Image type sniffed by magic bytes (JPEG/PNG/WebP), ≤4 MB after client downscaling to ≤1600 px; request size caps on every route; text length caps in every schema; signed stall length cap.
 
 ## HTTP hardening (`src/proxy.ts`, `src/lib/csp.ts`, unit-tested)
 - CSP: scripts only from our origin with a per-request nonce plus `'strict-dynamic'` and PayPal hosts; `connect-src` adds only `https://ntfy.sh` for the live counter; frames only PayPal/Venmo; `object-src 'none'`; `base-uri 'self'`; `form-action` self + PayPal; `frame-ancestors 'none'`; `upgrade-insecure-requests` in production; `'unsafe-eval'` only in development.
@@ -35,8 +36,27 @@ Per-IP token-bucket rate limits on AI, PayPal and stall routes (best-effort on s
 ## Privacy
 No analytics or trackers; no PII in server logs (errors log only an error name). `/privacy` explains what stays on the device and what goes to PayPal, Gemini, Channel3 and ntfy.sh (order IDs only).
 
+## Audit (2026-11-02)
+A review of every API route, the signing and doorbell code, the CSP and the client bundle before the first deploy.
+
+| Severity | Finding | Status |
+| --- | --- | --- |
+| High | Anyone who knew an order ID (every buyer knows their own) could refund it or add tracking through `POST /api/v1/orders/{id}`. The same-origin check doesn't apply to non-browser clients, and the route didn't check who was asking. A buyer could pay, collect, then refund themselves. | Fixed: stall owner token, order ↔ stall and capture ↔ order checks |
+| Medium | Anyone with an invoice share link could cancel the invoice or send reminder emails via `POST /api/v1/invoices/{id}`. | Fixed: invoice owner token |
+| Medium | Stall IDs were chosen by the client, so a second stall could be signed under an existing stall's ID. | Fixed: the server assigns IDs |
+| Low | Channel3 offer links were rendered as `href` without a scheme check, and item photo URLs accepted any scheme. | Fixed: `https:` only |
+| Low | `pnpm audit`: one moderate (minimatch) and one low (deepmerge) advisory, both under the `shadcn` CLI and never loaded at runtime. | Accepted |
+| Info | Checked and fine: no secret values or names in `.next/static`, `.env*` untracked, `/dev/health` 404s in production, `MOCK_AI` refused in production, prices always recomputed from the signed stall, receipt QRs and stall links HMAC-verified, CSP nonce-only scripts. | — |
+
+Verified locally against the PayPal sandbox: no token, a forged token, another stall's token, another stall's order and a capture from another order are all refused. Stalls and invoices made before this change have no token, so publish or send them again to refund or cancel from the app.
+
+## Known limits
+- **No seller accounts.** Creating an invoice or plan, signing a stall, and the AI routes are open to anyone, limited only by per-IP rate limits that are best-effort on serverless. That's acceptable on the sandbox. A production launch needs seller sign-in (for example Log in with PayPal) and a shared rate-limit store.
+- The owner token lives in the seller's browser storage. Anyone with access to that device, or an export file, can act as the seller.
+- The sandbox buyer login on the landing page is a public test account by design (`NEXT_PUBLIC_*`, sandbox only).
+
 ## Not yet done
-`pnpm audit` review, an external header scan on the deployed URL, and webhook signature verification (no webhooks are used).
+An external header scan on the deployed URL, and webhook signature verification (no webhooks are used).
 
 ## Reporting
 Please open a GitHub issue without sensitive details and ask for a private contact.

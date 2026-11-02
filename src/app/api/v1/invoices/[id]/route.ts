@@ -4,6 +4,7 @@ import { fromPayPalValue, isPayPalCurrency } from "@/core/money";
 import { ReceiptBook } from "@/core/receipts";
 import { assertSameOrigin, fail, HttpError, ok, parseJson, rateLimit } from "@/server/http";
 import { cancelInvoice, getInvoice, invoiceQrPng, remindInvoice } from "@/server/paypal/ops";
+import { assertOwner } from "@/server/stall";
 
 const Id = z.string().regex(/^INV2(-[A-Z0-9]{4}){4}$/);
 
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/v1/invoices/
   }
 }
 
-const Action = z.object({ action: z.enum(["remind", "cancel"]), note: z.string().max(500).optional() });
+const Action = z.object({ action: z.enum(["remind", "cancel"]), owner: z.string().max(40), note: z.string().max(500).optional() });
 
 /** Remind / cancel. Called only after the seller approves (UI button or a Penny approval card). */
 export async function POST(req: NextRequest, ctx: RouteContext<"/api/v1/invoices/[id]">) {
@@ -50,7 +51,8 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/v1/invoices
     assertSameOrigin(req);
     rateLimit(req, "invoice-action", 10);
     const id = Id.parse((await ctx.params).id);
-    const { action, note } = await parseJson(req, Action);
+    const { action, owner, note } = await parseJson(req, Action);
+    assertOwner("invoice", id, owner);
     if (action === "remind") await remindInvoice(id, note ? { note } : {}, { receipts: book });
     else await cancelInvoice(id, note ? { note } : {}, { receipts: book });
     const inv = await getInvoice(id, { receipts: book });

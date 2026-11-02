@@ -41,6 +41,8 @@ export type InvoiceRecord = {
   status: string;
   payerUrl?: string;
   qrPng?: string; // base64
+  /** Owner token from /invoices. Remind and cancel need it. */
+  owner?: string;
   createdAt: string;
   dueDate?: string;
   lastCheckedAt?: string;

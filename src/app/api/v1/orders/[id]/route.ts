@@ -3,15 +3,17 @@ import { z } from "zod";
 import { fromPayPalValue, isPayPalCurrency, toPayPalValue } from "@/core/money";
 import { ReceiptBook } from "@/core/receipts";
 import { assertSameOrigin, fail, HttpError, ok, parseJson, rateLimit } from "@/server/http";
-import { paypal } from "@/server/paypal/client";
 import { addTracking, getOrder, refundCapture } from "@/server/paypal/ops";
-import type { Capture } from "@/server/paypal/types";
+import { assertOwner } from "@/server/stall";
 
 const OrderId = z.string().regex(/^[A-Z0-9]{5,40}$/);
 
+// Every action names the seller's stall and carries its owner token (from /stalls/sign).
+const Owned = { stallId: z.string().uuid(), owner: z.string().max(40) };
+
 const Body = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("refund"), captureId: z.string().regex(/^[A-Z0-9]{5,40}$/), amountMinor: z.number().int().positive().optional(), note: z.string().max(255).optional() }),
-  z.object({ action: z.literal("track"), captureId: z.string().regex(/^[A-Z0-9]{5,40}$/), trackingNumber: z.string().min(3).max(64), carrier: z.string().min(2).max(64), carrierNameOther: z.string().max(64).optional() }),
+  z.object({ action: z.literal("refund"), ...Owned, captureId: z.string().regex(/^[A-Z0-9]{5,40}$/), amountMinor: z.number().int().positive().optional(), note: z.string().max(255).optional() }),
+  z.object({ action: z.literal("track"), ...Owned, captureId: z.string().regex(/^[A-Z0-9]{5,40}$/), trackingNumber: z.string().min(3).max(64), carrier: z.string().min(2).max(64), carrierNameOther: z.string().max(64).optional() }),
 ]);
 
 /** Order status for the ledger and Penny's get_order. */
@@ -37,9 +39,16 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/v1/orders/[
     rateLimit(req, "order-action", 10);
     const orderId = OrderId.parse((await ctx.params).id);
     const body = await parseJson(req, Body);
+    assertOwner("stall", body.stallId, body.owner);
+
+    // The order must belong to that stall, and the capture to that order.
+    const order = await getOrder(orderId, { receipts: book });
+    const pu = order.purchase_units[0];
+    if (pu?.custom_id !== body.stallId) throw new HttpError(403, "NOT_YOUR_ORDER", "This order wasn't paid at your stall.");
+    const cap = pu.payments?.captures?.find((c) => c.id === body.captureId);
+    if (!cap) throw new HttpError(400, "CAPTURE_NOT_IN_ORDER", "That payment isn't part of this order.");
 
     if (body.action === "refund") {
-      const cap = await paypal<Capture>("GET", `/v2/payments/captures/${body.captureId}`, { receipts: book, note: "get capture" });
       const c = cap.amount.currency_code;
       if (!isPayPalCurrency(c)) throw new HttpError(400, "BAD_CURRENCY", "Unsupported currency.");
       const captured = fromPayPalValue(cap.amount.value, c);
@@ -53,12 +62,12 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/v1/orders/[
       return ok({ refundId: refund.id, status: refund.status, refundedMinor: body.amountMinor ?? captured, currency: c }, book.items);
     }
 
-    const order = await addTracking(
+    const tracked = await addTracking(
       orderId,
       { captureId: body.captureId, trackingNumber: body.trackingNumber, carrier: body.carrier.toUpperCase(), carrierNameOther: body.carrierNameOther },
       { receipts: book },
     );
-    return ok({ orderId: order.id, status: order.status }, book.items);
+    return ok({ orderId: tracked.id, status: tracked.status }, book.items);
   } catch (err) {
     return fail(err, book.items);
   }

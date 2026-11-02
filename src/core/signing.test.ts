@@ -1,6 +1,8 @@
 import LZString from "lz-string";
 import { describe, expect, it } from "vitest";
-import { peekStall, signReceipt, signStall, verifyReceipt, verifyStall } from "./signing";
+import { ownerToken, peekStall, signReceipt, signStall, verifyOwner, verifyReceipt, verifyStall } from "./signing";
+import { isHttps } from "./market";
+import { StallItem } from "./stall";
 import { priceCart, type StallPayload } from "./stall";
 
 const SECRET = "test-secret-test-secret-test-secret-123";
@@ -69,5 +71,35 @@ describe("priceCart", () => {
     expect(() => priceCart(stall, [{ id: "free-money", qty: 1 }])).toThrow();
     expect(() => priceCart(stall, [{ id: "latte", qty: 0 }])).toThrow();
     expect(() => priceCart(stall, [])).toThrow();
+  });
+});
+
+describe("owner tokens", () => {
+  const id = stall.id;
+  it("accepts the token minted for that id", () => {
+    expect(verifyOwner("stall", id, ownerToken("stall", id, SECRET), SECRET)).toBe(true);
+  });
+  it("rejects a missing, wrong-id, wrong-kind or wrong-secret token", () => {
+    expect(verifyOwner("stall", id, undefined, SECRET)).toBe(false);
+    expect(verifyOwner("stall", id, "", SECRET)).toBe(false);
+    expect(verifyOwner("stall", id, ownerToken("stall", "11111111-2222-4333-8444-555555555555", SECRET), SECRET)).toBe(false);
+    expect(verifyOwner("stall", id, ownerToken("invoice", id, SECRET), SECRET)).toBe(false);
+    expect(verifyOwner("stall", id, ownerToken("stall", id, `${SECRET}x`), SECRET)).toBe(false);
+  });
+});
+
+describe("third-party URLs", () => {
+  it("keeps only https", () => {
+    expect(isHttps("https://shop.example/p/1")).toBe(true);
+    expect(isHttps("javascript:alert(1)")).toBe(false);
+    expect(isHttps("http://shop.example")).toBe(false);
+    expect(isHttps("data:text/html,x")).toBe(false);
+    expect(isHttps(undefined)).toBe(false);
+  });
+  it("refuses non-https item photos in a stall", () => {
+    const base = { id: "a", name: "A", price: 100 };
+    expect(StallItem.safeParse({ ...base, img: "https://cdn.example/a.jpg" }).success).toBe(true);
+    expect(StallItem.safeParse({ ...base, img: "javascript:alert(1)" }).success).toBe(false);
+    expect(StallItem.safeParse({ ...base, img: "http://cdn.example/a.jpg" }).success).toBe(false);
   });
 });

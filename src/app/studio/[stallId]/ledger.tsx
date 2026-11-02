@@ -51,6 +51,8 @@ export function Ledger({ stallId }: { stallId: string }) {
   const settings = useStore((s) => s.settings);
   const patchLedger = useStore((s) => s.patchLedger);
   const upsertInvoice = useStore((s) => s.upsertInvoice);
+  // Refunds and shipping prove this device published the stall.
+  const ownedBy = () => ({ stallId, owner: useStore.getState().stalls.find((s) => s.id === stallId)?.owner });
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [sorting, setSorting] = useState<SortingState>([{ id: "at", desc: true }]);
@@ -103,7 +105,7 @@ export function Ledger({ stallId }: { stallId: string }) {
         const amountMinor = toMinor(Number(f.amount), cur);
         if (!(amountMinor > 0) || amountMinor > remaining) throw new Error("Enter an amount up to what's left to refund.");
         const res = await api<{ refundId: string; status: string; refundedMinor: number }>(`/api/v1/orders/${r.id}`, {
-          body: { action: "refund", captureId: r.captureId, amountMinor: amountMinor === r.totalMinor ? undefined : amountMinor },
+          body: { action: "refund", ...ownedBy(), captureId: r.captureId, amountMinor: amountMinor === r.totalMinor ? undefined : amountMinor },
         });
         const total = r.refundedMinor + res.refundedMinor;
         patchLedger(r.id, { refundedMinor: total, status: total >= r.totalMinor ? "REFUNDED" : "PARTIALLY_REFUNDED" });
@@ -128,7 +130,7 @@ export function Ledger({ stallId }: { stallId: string }) {
       },
       run: async (f) => {
         if (!f.number?.trim()) throw new Error("Add a tracking number.");
-        await api(`/api/v1/orders/${r.id}`, { body: { action: "track", captureId: r.captureId, trackingNumber: f.number.trim(), carrier: f.carrier.trim() || "OTHER" } });
+        await api(`/api/v1/orders/${r.id}`, { body: { action: "track", ...ownedBy(), captureId: r.captureId, trackingNumber: f.number.trim(), carrier: f.carrier.trim() || "OTHER" } });
         patchLedger(r.id, { tracking: { number: f.number.trim(), carrier: f.carrier.trim() } });
         return "Tracking added.";
       },
@@ -148,8 +150,8 @@ export function Ledger({ stallId }: { stallId: string }) {
         fields: [{ key: "note", label: "Note", value: "Just a friendly reminder. Thank you!" }],
       },
       run: async (f) => {
-        const res = await api<{ status: string }>(`/api/v1/invoices/${r.id}`, { body: { action: "remind", note: f.note } });
         const inv = useStore.getState().invoices.find((i) => i.id === r.id);
+        const res = await api<{ status: string }>(`/api/v1/invoices/${r.id}`, { body: { action: "remind", owner: inv?.owner, note: f.note } });
         if (inv) upsertInvoice({ ...inv, status: res.status });
         return "Reminder sent.";
       },

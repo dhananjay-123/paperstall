@@ -175,7 +175,7 @@ function buildProposal(p: AgentProposal, stall: Stall, ledger: { n: number; entr
         fields: [{ key: "note", label: "Note to customer", value: String(a.note ?? (remind ? "Just a friendly reminder. Thank you!" : "")) }],
       },
       run: async (f) => {
-        const res = await api<{ status: string }>(`/api/v1/invoices/${inv.id}`, { body: { action: remind ? "remind" : "cancel", note: f.note || undefined } });
+        const res = await api<{ status: string }>(`/api/v1/invoices/${inv.id}`, { body: { action: remind ? "remind" : "cancel", owner: inv.owner, note: f.note || undefined } });
         s.upsertInvoice({ ...inv, status: res.status });
         return remind ? "Reminder sent." : `Invoice ${res.status.toLowerCase()}.`;
       },
@@ -211,7 +211,7 @@ function buildProposal(p: AgentProposal, stall: Stall, ledger: { n: number; entr
           const minor = toMinor(Number(f.amount), lc);
           if (!(minor > 0) || minor > remaining) throw new Error("Enter an amount up to what's left to refund.");
           const res = await api<{ refundId: string; status: string; refundedMinor: number }>(`/api/v1/orders/${l.id}`, {
-            body: { action: "refund", captureId: l.captureId, amountMinor: minor === l.totalMinor ? undefined : minor, note: a.reason ? String(a.reason).slice(0, 255) : undefined },
+            body: { action: "refund", stallId: stall.id, owner: stall.owner, captureId: l.captureId, amountMinor: minor === l.totalMinor ? undefined : minor, note: a.reason ? String(a.reason).slice(0, 255) : undefined },
           });
           const total = (l.refundedMinor ?? 0) + res.refundedMinor;
           s.patchLedger(l.id, { refundedMinor: total, status: total >= l.totalMinor ? "REFUNDED" : "PARTIALLY_REFUNDED" });
@@ -232,7 +232,7 @@ function buildProposal(p: AgentProposal, stall: Stall, ledger: { n: number; entr
         ],
       },
       run: async (f) => {
-        await api(`/api/v1/orders/${l.id}`, { body: { action: "track", captureId: l.captureId, trackingNumber: f.number, carrier: f.carrier } });
+        await api(`/api/v1/orders/${l.id}`, { body: { action: "track", stallId: stall.id, owner: stall.owner, captureId: l.captureId, trackingNumber: f.number, carrier: f.carrier } });
         s.patchLedger(l.id, { tracking: { number: f.number, carrier: f.carrier } });
         return "Tracking added; the buyer is notified by PayPal.";
       },
@@ -260,10 +260,10 @@ function buildProposal(p: AgentProposal, stall: Stall, ledger: { n: number; entr
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email ?? "")) throw new Error("Add the customer's email (Edit).");
         const due = /^\d{4}-\d{2}-\d{2}$/.test(f.due ?? "") ? f.due : undefined;
         const [given, ...rest] = String(a.customerName).split(/\s+/);
-        const res = await api<{ id: string; number?: string; status: string; totalMinor: number; payerUrl?: string; qrPng?: string }>("/api/v1/invoices", {
+        const res = await api<{ id: string; number?: string; status: string; totalMinor: number; payerUrl?: string; qrPng?: string; owner: string }>("/api/v1/invoices", {
           body: { currency: c, businessName: stall.payload.n, recipient: { email: f.email, givenName: given, surname: rest.join(" ") || undefined, businessName: String(a.customerName) }, items, dueDate: due },
         });
-        s.upsertInvoice({ id: res.id, stallId: stall.id, number: res.number, customer: String(a.customerName), email: f.email, currency: c, totalMinor: res.totalMinor, status: res.status, payerUrl: res.payerUrl, qrPng: res.qrPng, createdAt: new Date().toISOString(), dueDate: due });
+        s.upsertInvoice({ id: res.id, stallId: stall.id, number: res.number, customer: String(a.customerName), email: f.email, currency: c, totalMinor: res.totalMinor, status: res.status, payerUrl: res.payerUrl, qrPng: res.qrPng, owner: res.owner, createdAt: new Date().toISOString(), dueDate: due });
         return `Invoice ${res.number ?? res.id} sent.`;
       },
     };
@@ -282,10 +282,9 @@ function buildProposal(p: AgentProposal, stall: Stall, ledger: { n: number; entr
         endpoint: "Signed stall link → POST /v2/checkout/orders at checkout",
       },
       run: async () => {
-        const id = crypto.randomUUID();
-        const payload = { id, n: String(a.name).slice(0, 60), c, p: stall.payload.p, i: [{ id: "item", name: String(a.name).slice(0, 80), price }], t: stall.payload.t };
-        const { signed, doorbell } = await api<{ signed: string; doorbell?: string }>("/api/v1/stalls/sign", { body: { payload } });
-        s.upsertStall({ id, payload: peekStall(signed)!, signed, createdAt: new Date().toISOString(), intent: "shop", doorbell });
+        const payload = { n: String(a.name).slice(0, 60), c, p: stall.payload.p, i: [{ id: "item", name: String(a.name).slice(0, 80), price }], t: stall.payload.t };
+        const { signed, doorbell, id, owner } = await api<{ signed: string; doorbell?: string; id: string; owner: string }>("/api/v1/stalls/sign", { body: { payload } });
+        s.upsertStall({ id, payload: peekStall(signed)!, signed, createdAt: new Date().toISOString(), intent: "shop", doorbell, owner });
         const url = `${window.location.origin}/s#${signed}`;
         void navigator.clipboard?.writeText(url);
         return "Link created and copied. It's also in your stalls list.";

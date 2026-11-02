@@ -55,7 +55,7 @@ export function InvoicePublish() {
     setBusy(true);
     setError(null);
     try {
-      const res = await api<{ id: string; number?: string; status: string; totalMinor: number; payerUrl?: string; qrPng?: string }>("/api/v1/invoices", {
+      const res = await api<{ id: string; number?: string; status: string; totalMinor: number; payerUrl?: string; qrPng?: string; owner: string }>("/api/v1/invoices", {
         body: {
           currency,
           businessName: business || undefined,
@@ -77,6 +77,7 @@ export function InvoicePublish() {
         status: res.status,
         payerUrl: res.payerUrl,
         qrPng: res.qrPng,
+        owner: res.owner,
         createdAt: new Date().toISOString(),
         dueDate: due,
       });

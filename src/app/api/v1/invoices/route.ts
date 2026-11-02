@@ -3,7 +3,9 @@ import { z } from "zod";
 import { fromPayPalValue, isPayPalCurrency, toPayPalValue, type CurrencyCode } from "@/core/money";
 import { ReceiptBook } from "@/core/receipts";
 import { assertSameOrigin, fail, HttpError, ok, parseJson, rateLimit } from "@/server/http";
+import { ownerToken } from "@/core/signing";
 import { createDraftInvoice, invoiceQrPng, sendInvoice } from "@/server/paypal/ops";
+import { signingSecret } from "@/server/stall";
 
 const Body = z.object({
   currency: z.string().refine(isPayPalCurrency, "Unsupported currency"),
@@ -67,6 +69,8 @@ export async function POST(req: NextRequest) {
         totalMinor: expectedMinor,
         payerUrl: sent?.href ?? draft.detail.metadata?.recipient_view_url,
         qrPng,
+        // Remind and cancel need this; the invoice ID alone is public (it's in the share link).
+        owner: ownerToken("invoice", draft.id, signingSecret()),
       },
       book.items,
     );

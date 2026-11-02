@@ -1,5 +1,12 @@
 # Changelog
 
+## Security audit (2026-11-02)
+- Fixed (high): refunds and tracking needed only an order ID. They now need the stall's owner token, and the server checks with PayPal that the order belongs to that stall and the capture to that order.
+- Fixed: invoice remind and cancel need the invoice's owner token, so a share link can't cancel an invoice.
+- Fixed: the server assigns stall IDs, so a stall can't be signed under another stall's ID.
+- Fixed: only `https:` URLs from the market check and in item photos.
+- Audit table, accepted risks and known limits in [SECURITY.md](SECURITY.md); design in ADR-013.
+
 ## Live counter and design overhaul (2026-11-02)
 - Live counter: paid orders appear in the studio by themselves via an ntfy.sh doorbell, each re-checked with PayPal; pickup codes on receipts and cards; one recording tab per stall; cross-device "already counted".
 - Studio redesigned as a dashboard: live orders with stats, sales ledger, My stall (paper → QR poster) and Penny side by side; bottom tab bar on phones.

@@ -66,9 +66,7 @@ function ShopPublish({ defaultPayee }: { defaultPayee: string }) {
     setBusy(true);
     setError(null);
     try {
-      const id = crypto.randomUUID();
       const payload = {
-        id,
         n: name.trim().slice(0, 60) || "My stall",
         ...(read.business.kind ? { k: read.business.kind.slice(0, 40) } : {}),
         c: currency,
@@ -81,7 +79,8 @@ function ShopPublish({ defaultPayee }: { defaultPayee: string }) {
         l: read.sourceLanguage.slice(0, 12),
         ...(taxRateBp(read, currency) > 0 ? { r: taxRateBp(read, currency) } : {}),
       };
-      const { signed, doorbell } = await api<{ signed: string; doorbell?: string }>("/api/v1/stalls/sign", { body: { payload } });
+      // The server picks the stall ID and returns an owner token for this device.
+      const { signed, doorbell, id, owner } = await api<{ signed: string; doorbell?: string; id: string; owner: string }>("/api/v1/stalls/sign", { body: { payload } });
       // The seller's own handwriting becomes each item's art (kept on this device).
       for (const it of items as ((typeof items)[number] & { _readId: string })[]) {
         const src = read.items.find((r) => r.id === it._readId);
@@ -100,6 +99,7 @@ function ShopPublish({ defaultPayee }: { defaultPayee: string }) {
         intent: "shop",
         sourceImage: thumb,
         doorbell,
+        owner,
         metrics: { photoToPublishMs: elapsedSince(draft.startedAt), editsPerItem: Number((draft.edits / Math.max(1, items.length)).toFixed(2)) },
       };
       upsertStall(stall);

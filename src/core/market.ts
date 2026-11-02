@@ -76,7 +76,7 @@ export function bestMatch(query: string, products: C3Product[], currency: string
   const offers = matched
     .flatMap((m) => m.p.offers ?? [])
     .filter((o) => o.price?.currency?.toUpperCase() === currency.toUpperCase() && o.price.price > 0 && (o.condition ?? "new") === "new")
-    .filter((o) => !seen.has(o.url) && !!seen.add(o.url));
+    .filter((o) => isHttps(o.url) && !seen.has(o.url) && !!seen.add(o.url));
   const inStock = offers.filter((o) => o.availability === "InStock");
   const pool = inStock.length >= 2 ? inStock : offers;
   if (pool.length < 2) return null; // one listing isn't a market
@@ -88,7 +88,7 @@ export function bestMatch(query: string, products: C3Product[], currency: string
     productId: best.p.id,
     title: best.p.title,
     brand: best.p.brands?.[0]?.name,
-    image: image?.cleaned_url ?? image?.url,
+    image: [image?.cleaned_url, image?.url].find(isHttps),
     features: (best.p.key_features ?? []).slice(0, 4),
     confidence: Number(best.c.toFixed(2)),
     currency: currency.toUpperCase(),
@@ -105,6 +105,16 @@ export function bestMatch(query: string, products: C3Product[], currency: string
     suggested: Math.max(0.01, Math.round(med * 0.95 * 100) / 100),
     checkedAt: now.toISOString(),
   };
+}
+
+/** Third-party links and photos end up in href/src, so only plain https URLs are kept. */
+export function isHttps(url: unknown): url is string {
+  if (typeof url !== "string") return false;
+  try {
+    return new URL(url).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export type PriceGuard = { kind: "too_low" | "too_high"; message: string; fix: number } | null;

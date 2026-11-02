@@ -44,8 +44,9 @@ const OPS: Record<string, Op> = {
   "/api/v1/stalls/sign": {
     tag: "Stalls",
     summary: "Sign a stall so it can take payments",
-    body: z.object({ payload: StallPayload.omit({ v: true, x: true }) }),
-    response: z.object({ signed: Signed }),
+    description: "The server assigns the stall ID and returns an owner token once; refunds and shipping need it.",
+    body: z.object({ payload: StallPayload.omit({ v: true, x: true, nt: true, id: true }) }),
+    response: z.object({ signed: Signed, id: z.string().uuid(), owner: z.string(), doorbell: z.string().optional() }),
   },
   "/api/v1/stalls/check": { tag: "Stalls", summary: "Check a stall link's signature and expiry", body: z.object({ signed: Signed }), response: z.object({ ok: z.boolean(), reason: z.string().optional() }) },
   "/api/v1/orders": {
@@ -80,7 +81,7 @@ const OPS: Record<string, Op> = {
       memo: z.string().optional(),
       note: z.string().optional(),
     }),
-    response: z.object({ id: z.string(), number: z.string().optional(), status: z.string(), totalMinor: z.number().int(), payerUrl: z.string().optional(), qrPng: z.string().optional() }),
+    response: z.object({ id: z.string(), number: z.string().optional(), status: z.string(), totalMinor: z.number().int(), payerUrl: z.string().optional(), qrPng: z.string().optional(), owner: z.string() }),
   },
   "/api/v1/plans": {
     tag: "Subscriptions",

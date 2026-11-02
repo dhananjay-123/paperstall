@@ -13,7 +13,7 @@ export const StallItem = z.object({
   // Market range stored at publish time for the concierge ("is this a good price?").
   mkt: z.tuple([z.number().int(), z.number().int()]).optional(),
   // Product photo from the market check, only when the seller opted in.
-  img: z.url().max(400).optional(),
+  img: z.url({ protocol: /^https$/ }).max(400).optional(),
 });
 export type StallItem = z.infer<typeof StallItem>;
 
@@ -45,6 +45,8 @@ export type Stall = {
   metrics?: { photoToPublishMs?: number; editsPerItem?: number };
   /** The live-counter topic in clear. Only on the seller's device, never in the link. */
   doorbell?: string;
+  /** Owner token from /stalls/sign. Refunds and shipping need it; only this device has it. */
+  owner?: string;
 };
 
 export type CartLine = { id: string; qty: number };

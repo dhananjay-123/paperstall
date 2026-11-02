@@ -11,7 +11,7 @@ OpenAPI specs (orders v2, invoicing v2, catalog-products v1, subscriptions v1, p
 | Orders v2 | `POST /v2/checkout/orders/{id}/capture` | Capture after buyer approval; `ORDER_ALREADY_CAPTURED` falls back to GET | `src/app/api/v1/orders/capture/route.ts` |
 | Orders v2 | `GET /v2/checkout/orders/{id}` | Verify-to-record: status, capture, payee, amount, currency, stall | `src/app/api/v1/verify/route.ts`, `src/core/verify` |
 | Orders v2 | `POST /v2/checkout/orders/{id}/track` | Add shipment tracking (approval-gated) | `src/app/api/v1/orders/[id]/route.ts` |
-| Payments v2 | `GET /v2/payments/captures/{id}`, `POST …/{id}/refund` | Refunds, capped at the captured amount (approval-gated) | `src/app/api/v1/orders/[id]/route.ts` |
+| Payments v2 | `POST /v2/payments/captures/{id}/refund` | Refunds, capped at the captured amount (approval-gated, owner token, capture must be in the stall's order) | `src/app/api/v1/orders/[id]/route.ts` |
 | Invoicing v2 | `POST /v2/invoicing/invoices` | Draft invoice; our total is compared with PayPal's before sending | `src/app/api/v1/invoices/route.ts` |
 | Invoicing v2 | `POST …/{id}/send`, `POST …/{id}/generate-qr-code` | Send to customer; QR for the share page | same |
 | Invoicing v2 | `GET …/{id}`, `POST …/{id}/remind`, `POST …/{id}/cancel`, `DELETE …/{id}` | Status polling, reminders, cancel, dev health check | `src/app/api/v1/invoices/[id]/route.ts`, `src/app/api/v1/dev/health/route.ts` |
