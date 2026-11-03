@@ -3,9 +3,9 @@
 import { useLayoutEffect, useSyncExternalStore } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { THEME_KEY, resolveDark, type ThemeChoice } from "@/lib/theme";
+import { DEFAULT_THEME, THEME_KEY, resolveDark, type ThemeChoice } from "@/lib/theme";
 
-const ORDER: ThemeChoice[] = ["system", "light", "dark"];
+const ORDER: ThemeChoice[] = ["light", "dark", "system"];
 const LABEL: Record<ThemeChoice, string> = {
   system: "Theme: system",
   light: "Theme: paper (light)",
@@ -16,9 +16,9 @@ const CHANGE_EVENT = "paperstall:theme-change";
 function readChoice(): ThemeChoice {
   try {
     const v = localStorage.getItem(THEME_KEY);
-    return v === "light" || v === "dark" ? v : "system";
+    return v === "dark" || v === "system" ? v : DEFAULT_THEME;
   } catch {
-    return "system";
+    return DEFAULT_THEME;
   }
 }
 
@@ -32,7 +32,7 @@ function subscribe(onChange: () => void) {
 }
 
 export function ThemeToggle() {
-  const choice = useSyncExternalStore(subscribe, readChoice, () => "system" as const);
+  const choice = useSyncExternalStore(subscribe, readChoice, () => DEFAULT_THEME);
 
   // Re-apply after React's dev remount clears the class set by the inline script.
   useLayoutEffect(() => {

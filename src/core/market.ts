@@ -40,20 +40,83 @@ const tokens = (s: string) =>
 /** Tokens like "3", "10000mah", "s24", "airpods" — model identifiers must match exactly. */
 const isModelish = (t: string) => /\d/.test(t);
 
+// Product names that tell us the maker, so "AirPods" sold under Burga is a case, not AirPods.
+// Values are the brand names Channel3 may use for that maker.
+const IMPLIED_BRANDS: Record<string, string[]> = {
+  apple: ["apple"],
+  airpods: ["apple"],
+  iphone: ["apple"],
+  ipad: ["apple"],
+  macbook: ["apple"],
+  imac: ["apple"],
+  beats: ["beats", "apple"],
+  samsung: ["samsung"],
+  galaxy: ["samsung"],
+  pixel: ["google"],
+  google: ["google"],
+  jbl: ["jbl", "harman"],
+  anker: ["anker", "soundcore"],
+  soundcore: ["anker", "soundcore"],
+  spigen: ["spigen"],
+  sony: ["sony"],
+  playstation: ["sony"],
+  bose: ["bose"],
+  xiaomi: ["xiaomi", "redmi"],
+  redmi: ["xiaomi", "redmi"],
+  oneplus: ["oneplus"],
+  nintendo: ["nintendo"],
+  xbox: ["microsoft", "xbox"],
+  kindle: ["amazon", "kindle"],
+};
+
+/** The brands a query implies ("AirPods Pro 2" → Apple), or null when it names no known maker. */
+export function impliedBrands(query: string): string[] | null {
+  const hit = tokens(query).find((t) => t in IMPLIED_BRANDS);
+  return hit ? IMPLIED_BRANDS[hit] : null;
+}
+
+/** A listing whose brand is a different maker than the query implies is not the product. */
+export function isOtherBrand(query: string, p: C3Product): boolean {
+  const want = impliedBrands(query);
+  const names = (p.brands ?? []).map((b) => b.name.toLowerCase()).filter(Boolean);
+  if (!want || !names.length) return false;
+  return !names.some((n) => want.some((w) => n.includes(w)));
+}
+
+// Product-type words: a title that adds one the seller didn't write ("AirPods Pro 2 Case") is a
+// different thing, so each costs score.
+const TYPE_WORDS = new Set(["case", "cases", "cover", "covers", "skin", "skins", "sleeve", "sleeves", "strap", "straps", "band", "bands", "tips", "protector", "protectors", "holder", "holders", "mount", "mounts", "stand", "stands", "charger", "cable", "adapter", "dock", "keychain"]);
+const TYPE_WORD_PENALTY = 0.3;
+
+/**
+ * The part of a title that names what is sold: "AirPods Pro 2 with MagSafe Charging Case" is
+ * earbuds, and "Aluminum Case … Sport Band" is how Apple names a watch, not a case and a band.
+ */
+const titleHead = (title: string) =>
+  title
+    .toLowerCase()
+    .split(/\s(?:with|w\/|includes?|including)\s|\(/)[0]
+    .replace(/\b(?:aluminum|aluminium|titanium|steel|ceramic)\s+case\b|\b(?:sport|solo|braided)\s+(?:band|loop)\b/g, " ");
+
 export function matchConfidence(query: string, p: C3Product): number {
   const q = tokens(query);
   if (!q.length) return 0;
+  if (isOtherBrand(query, p)) return 0;
   const hay = new Set(tokens(`${p.brands?.map((b) => b.name).join(" ") ?? ""} ${p.title}`));
   const hits = q.filter((t) => hay.has(t)).length;
   const models = q.filter(isModelish);
   // A wrong model number (Go 3 vs Go 4) is a wrong product: never show it.
   if (models.some((m) => !hay.has(m))) return Math.min(0.3, hits / q.length);
   const brandHit = p.brands?.some((b) => q.includes(b.name.toLowerCase())) ?? false;
-  return Math.min(1, hits / q.length + (brandHit ? 0.1 : 0));
+  const extras = new Set(tokens(titleHead(p.title)).filter((t) => TYPE_WORDS.has(t) && !q.includes(t))).size;
+  return Math.max(0, Math.min(1, hits / q.length + (brandHit ? 0.1 : 0)) - extras * TYPE_WORD_PENALTY);
 }
 
 // Words that make a listing a thing *for* the product (a case, a skin, a knock-off), not the product.
-const ACCESSORY_WORDS = /\b(compatible|replacement|cover|covers|skin|skins|sleeve|protector|protective|silicone|strap|holder|keychain|ear ?tips|decal|sticker|dummy|replica|clone|accessor(?:y|ies))\b/;
+// Anywhere in the title:
+const ACCESSORY_WORDS = /\b(compatible|replacement|keychain|decal|sticker|dummy|replica|clone|accessor(?:y|ies))\b/;
+// Only in the part naming what is sold (see titleHead):
+const ACCESSORY_NOUNS = /\b(case|cases|cover|covers|skin|skins|sleeves?|straps?|bands?|ear ?tips|tips|protectors?|protective|silicone|holders?|mounts?|stands?|charger|cable|adapter|dock|charging case)\b/;
 const ACCESSORY_FOR = /\b(case|cases|charger|cable|stand|mount|dock|adapter)\s+(for|compatible)\b/;
 
 /** "Apex Case for AirPods Pro 2" is not AirPods Pro 2, unless the seller is selling cases. */
@@ -61,8 +124,8 @@ export function isAccessoryListing(query: string, title: string): boolean {
   const q = query.toLowerCase();
   const t = title.toLowerCase();
   // The seller is selling the accessory itself: accessory listings are the market.
-  if (ACCESSORY_WORDS.test(q) || /\b(case|cases|charger|cable|stand|mount|dock|adapter)\b/.test(q) || /\bfor\b/.test(q)) return false;
-  if (ACCESSORY_WORDS.test(t) || ACCESSORY_FOR.test(t)) return true;
+  if (ACCESSORY_WORDS.test(q) || ACCESSORY_NOUNS.test(q) || /\bfor\b/.test(q)) return false;
+  if (ACCESSORY_WORDS.test(t) || ACCESSORY_FOR.test(t) || ACCESSORY_NOUNS.test(titleHead(title))) return true;
   // "... for AirPods": a product for one of the words the seller wrote.
   const forWhat = /\bfor\s+(?:apple\s+|the\s+|new\s+)?([\p{L}\p{N}]+)/u.exec(t)?.[1];
   return Boolean(forWhat && tokens(query).includes(forWhat));
@@ -140,13 +203,39 @@ export type PriceGuard = { kind: "too_low" | "too_high"; message: string; fix: n
 export const GUARD_CONFIDENCE = 0.85;
 const GUARD_STORES = 3;
 
+// What a new one usually costs in USD, by product line. A written price inside its band is
+// plausible, so the guard won't talk the seller down to a fraction of it.
+const RETAIL_BANDS_USD: Record<string, [number, number]> = {
+  airpods: [79, 599],
+  iphone: [399, 1999],
+  ipad: [299, 2299],
+  macbook: [799, 4999],
+  imac: [1099, 2999],
+  galaxy: [149, 2199],
+  pixel: [349, 1899],
+  playstation: [399, 799],
+  xbox: [249, 699],
+  nintendo: [199, 499],
+  bose: [99, 549],
+};
+const GUARD_MIN_FIX_SHARE = 0.3;
+
+/** True when `written` is a normal new price for the product line the text names. */
+export function inRetailBand(written: number, currency: string | undefined, ...texts: (string | undefined)[]): boolean {
+  if ((currency ?? "USD").toUpperCase() !== "USD") return false;
+  const line = tokens(texts.filter(Boolean).join(" ")).find((t) => t in RETAIL_BANDS_USD);
+  if (!line) return false;
+  const [lo, hi] = RETAIL_BANDS_USD[line];
+  return written >= lo && written <= hi;
+}
+
 /**
  * Typo-style warning when the written price is far outside the market. It speaks only when the
  * match is strong and at least three stores agree on the price, and names the seller's own item.
  */
 export function priceGuard(
   written: number,
-  m: Pick<MarketMatch, "median" | "min" | "max" | "title" | "confidence" | "offers">,
+  m: Pick<MarketMatch, "median" | "min" | "max" | "title" | "confidence" | "offers"> & Partial<Pick<MarketMatch, "query" | "currency">>,
   fmt: (n: number) => string,
   itemName?: string,
 ): PriceGuard {
@@ -164,6 +253,8 @@ export function priceGuard(
   const shifted = shifts.map((f) => Math.round(written * f * 100) / 100).find((v) => v >= lo && v <= hi);
   if (tooHigh && shifted === undefined) return null;
   const fix = shifted ?? Math.round(m.median * 100) / 100;
+  // $199 for AirPods is a real price; if the market says $20 the match is wrong, not the seller.
+  if (fix < written * GUARD_MIN_FIX_SHARE && inRetailBand(written, m.currency, m.query, itemName)) return null;
   const short = (itemName?.trim() || m.title.split(/[,(|-]/)[0].trim()).slice(0, 40);
   return {
     kind: ratio < 0.25 ? "too_low" : "too_high",

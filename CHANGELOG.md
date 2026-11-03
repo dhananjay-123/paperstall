@@ -1,5 +1,9 @@
 # Changelog
 
+## Market check and light default (2026-11-03)
+- Fixed: "AirPods Pro 2" at $199 still matched Burga's "Apex - AirPods Pro 2 Case" at confidence 1.0 and asked "Did you mean $19.90?". Accessory nouns in a title's main part now mark it as an accessory, a listing from a different brand than the query implies (AirPods → Apple) is never a match, extra product-type words cost score, and the guard never suggests under 30% of a price inside the product line's normal retail band. Unit tests use the exact Channel3 response. Live re-check: AirPods Pro 2 gets no chip; JBL Go 4 at $4.90 still says "Did you mean $49.00?".
+- The site now opens in paper (light) for new visitors whatever the OS prefers; the toggle cycles paper → blueprint → system.
+
 ## Demo fixes (2026-11-03)
 Found while recording the demo video; each was reproduced on the sandbox and re-checked after the fix.
 - Fixed: the invoice QR was a broken image. PayPal's multipart response put the `text/plain` part header in front of the base64; extraction now starts at the PNG signature.

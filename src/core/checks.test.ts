@@ -110,6 +110,38 @@ describe("accessory listings", () => {
     const fakes = [at(product("Apex Case for AirPods Pro 2", "Apex", [23.95]), "c.example"), at(product("Case Compatible with AirPods Pro 2", "Generic", [29.99]), "d.example")];
     expect(bestMatch("AirPods Pro 2", [...fakes, ...real], "USD")).toMatchObject({ min: 199, max: 229 });
   });
+
+  // What Channel3 returned for "AirPods Pro 2" on 43f242a: a Burga case scored 1.0 and cheap
+  // listings pooled with it into "$17.99–$23.95 · 3 stores".
+  const burga: C3Product = {
+    id: "c3_burga_apex",
+    title: "Apex - AirPods Pro 2 Case",
+    brands: [{ id: "burga", name: "Burga" }],
+    offers: [{ url: "https://burga.us/products/apex-airpods-pro-2-case", domain: "burga.us", price: { price: 23.95, currency: "USD", compare_at_price: null }, availability: "InStock", condition: "new" }],
+  };
+  const cheap = [
+    { ...product("AirPods Pro 2", "Generic", [17.99]), id: "g1" },
+    { ...product("AirPods Pro 2nd Generation Earbuds", "Unbranded", [19.99]), id: "g2" },
+  ].map((p, i) => ({ ...p, offers: p.offers?.map((o) => ({ ...o, url: `https://cheap${i}.example/p`, domain: `cheap${i}.example` })) }));
+
+  it("does not match an AirPods case from another brand", () => {
+    expect(isAccessoryListing("AirPods Pro 2", burga.title)).toBe(true);
+    expect(matchConfidence("AirPods Pro 2", burga)).toBe(0);
+    expect(matchConfidence("AirPods Pro 2", { ...burga, brands: [{ name: "Apple" }] })).toBeLessThan(0.75);
+    expect(bestMatch("AirPods Pro 2", [burga, ...cheap], "USD")).toBeNull();
+  });
+
+  it("finds the real AirPods range next to the Burga case", () => {
+    const at = (p: C3Product, store: string): C3Product => ({ ...p, offers: p.offers?.map((o) => ({ ...o, url: `https://${store}/p`, domain: store })) });
+    const real = [at(product("Apple AirPods Pro 2 Wireless Earbuds with MagSafe Charging Case (USB-C)", "Apple", [189.99]), "a.example"), at(product("AirPods Pro 2", "Apple", [249]), "b.example")];
+    expect(bestMatch("AirPods Pro 2", [burga, ...cheap, ...real], "USD")).toMatchObject({ min: 189.99, max: 249, brand: "Apple" });
+  });
+
+  it("keeps brand-less queries and Apple watch names working", () => {
+    expect(matchConfidence("Anker 10000mAh power bank", product("Anker PowerCore 10000mAh Power Bank", "Anker", [29]))).toBe(1);
+    expect(isAccessoryListing("Apple Watch Series 9", "Apple Watch Series 9 GPS 41mm Midnight Aluminum Case Midnight Sport Band")).toBe(false);
+    expect(isAccessoryListing("Xiaomi Smart Band 8", "Xiaomi Smart Band 8 Fitness Tracker")).toBe(false);
+  });
 });
 
 describe("priceGuard", () => {
@@ -134,6 +166,17 @@ describe("priceGuard", () => {
     const cheap = { title: "Apex Case", min: 23.95, max: 29.99, median: 26, confidence: 1, offers: offers([23.95, 26, 29.99]) };
     expect(priceGuard(199, cheap, fmt, "AirPods Pro 2")).toBeNull();
     expect(priceGuard(2600, cheap, fmt, "Widget")).toMatchObject({ kind: "too_high", fix: 26 });
+  });
+  it("never talks a normal retail price down to a fraction of it", () => {
+    // The exact 43f242a match: AirPods Pro 2 written at $199 against $17.99–$23.95.
+    const wrong = { query: "AirPods Pro 2", currency: "USD", title: "Apex - AirPods Pro 2 Case", min: 17.99, max: 23.95, median: 19.99, confidence: 1, offers: offers([17.99, 19.99, 23.95]) };
+    expect(priceGuard(199, wrong, fmt, "AirPods Pro 2")).toBeNull();
+    // Outside the band it is still a slip.
+    expect(priceGuard(1990, wrong, fmt, "AirPods Pro 2")).toMatchObject({ kind: "too_high", fix: 19.9 });
+  });
+  it("still catches the JBL Go 4 demo slip", () => {
+    const jbl = { query: "JBL Go 4", currency: "USD", title: "JBL Go 4 Portable Speaker", min: 44.95, max: 49.95, median: 49.95, confidence: 1, offers: offers([44.95, 49.95, 49.95]) };
+    expect(priceGuard(4.9, jbl, fmt, "JBL Go 4")).toMatchObject({ kind: "too_low", fix: 49, message: "$4.90 for JBL Go 4? Did you mean $49.00?" });
   });
   it("stays quiet inside 25%–300% of the market", () => {
     expect(priceGuard(150, airpods, fmt)).toBeNull();

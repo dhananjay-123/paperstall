@@ -15,10 +15,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f1f1ec" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1530" },
-  ],
+  // Paper is the default theme, so the browser bar matches it whatever the OS prefers.
+  themeColor: "#f1f1ec",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
